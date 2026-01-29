@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ShareButtons } from "@/components/ShareButtons";
+import { Header } from "@/components/Header";
 
 interface TakePageProps {
   params: Promise<{ id: string }>;
@@ -79,18 +80,7 @@ export default async function TakePage({ params }: TakePageProps) {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
-      {/* Header */}
-      <header className="border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <span className="text-2xl">🧾</span>
-            <span className="font-bold text-xl tracking-tight">Receipts</span>
-          </Link>
-          <p className="text-white/50 text-sm hidden sm:block">
-            Hot takes with proof
-          </p>
-        </div>
-      </header>
+      <Header />
 
       {/* Take Detail */}
       <main className="max-w-6xl mx-auto px-4 py-12">

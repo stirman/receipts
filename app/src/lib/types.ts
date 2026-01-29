@@ -5,10 +5,28 @@ export interface Take {
   text: string;
   author: string;
   hash: string | null;
+  // AI verification fields
+  aiVerified: boolean;
+  aiSubject: string | null;
+  aiPrediction: string | null;
+  aiTimeframe: string | null;
+  aiResolutionCriteria: string | null;
+  // Timestamps
   createdAt: string;
   lockedAt: string;
   resolvesAt: string | null;
   resolvedAt: string | null;
   status: TakeStatus;
-  userId: string | null;
+  clerkUserId: string | null;
+}
+
+export interface AIVerificationResult {
+  isVerifiable: boolean;
+  refinedTake: string | null;
+  subject: string | null;
+  prediction: string | null;
+  timeframe: string | null;
+  resolutionCriteria: string | null;
+  suggestedResolutionDate: string | null;
+  explanation: string;
 }

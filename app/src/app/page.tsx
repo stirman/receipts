@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ReceiptCard } from "@/components/ReceiptCard";
 import { TakeForm } from "@/components/TakeForm";
+import { Header } from "@/components/Header";
 import type { Take } from "@/lib/types";
 
 export default function Home() {
@@ -33,18 +34,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
-      {/* Header */}
-      <header className="border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🧾</span>
-            <span className="font-bold text-xl tracking-tight">Receipts</span>
-          </div>
-          <p className="text-white/50 text-sm hidden sm:block">
-            Hot takes with proof
-          </p>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-4 py-16 text-center">

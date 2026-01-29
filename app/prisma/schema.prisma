@@ -17,6 +17,13 @@ model Take {
   author      String    @default("Anonymous")
   hash        String?   // SHA-256 hash for integrity verification
 
+  // AI verification fields
+  aiVerified      Boolean   @default(false)
+  aiSubject       String?   // e.g., "Houston Rockets"
+  aiPrediction    String?   // e.g., "will make the playoffs"
+  aiTimeframe     String?   // e.g., "2025-26 NBA season"
+  aiResolutionCriteria String? // e.g., "Team finishes in top 10 of Western Conference"
+
   // Timestamps
   createdAt   DateTime  @default(now())
   lockedAt    DateTime  @default(now())
@@ -26,18 +33,21 @@ model Take {
   // Status: pending | verified | wrong
   status      TakeStatus @default(PENDING)
 
-  // Optional relation to user
-  userId      String?
-  user        User?     @relation(fields: [userId], references: [id])
+  // Clerk user relation
+  clerkUserId String?
+  user        User?     @relation(fields: [clerkUserId], references: [clerkId])
 
   @@index([status])
   @@index([createdAt])
+  @@index([clerkUserId])
 }
 
 model User {
   id        String   @id @default(cuid())
-  username  String   @unique
+  clerkId   String   @unique // Clerk user ID
+  username  String   // Display name from Clerk profile
   email     String?  @unique
+  imageUrl  String?  // Profile image from Clerk
 
   // Record tracking
   wins      Int      @default(0)
