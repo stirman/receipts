@@ -1,7 +1,7 @@
-import { ImageResponse } from "@vercel/og";
+import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/db";
 
-export const runtime = "edge";
+// Use Node.js runtime (50MB limit) instead of Edge (1MB limit)
 
 // OG Image dimensions
 const WIDTH = 1200;
