@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  /* Receipt Paper Colors */
+  --color-receipt-paper: #fafaf8;
+  --color-receipt-border: #e8e8e4;
+  --color-receipt-text: #1a1a1a;
+  --color-receipt-text-light: #666666;
+  --color-receipt-text-muted: #888888;
+  --color-receipt-text-faded: #aaaaaa;
+  --color-receipt-divider: #cccccc;
+
+  /* Status Colors */
+  --color-status-pending-bg: #fef3c7;
+  --color-status-pending-text: #92400e;
+  --color-status-verified-bg: #d1fae5;
+  --color-status-verified-text: #065f46;
+  --color-status-wrong-bg: #fee2e2;
+  --color-status-wrong-text: #991b1b;
+
+  /* Background */
+  --color-background: #0a0a0f;
+  --color-foreground: #ffffff;
+
+  /* Fonts */
+  --font-mono: 'Space Mono', monospace;
+  --font-sans: 'Inter', -apple-system, sans-serif;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* Receipt perforated edge effect */
+.receipt-edge-top,
+.receipt-edge-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 16px;
+  background: linear-gradient(90deg,
+    transparent 0px, transparent 8px,
+    var(--color-receipt-paper) 8px, var(--color-receipt-paper) 16px
+  );
+  background-size: 16px 16px;
+  background-color: var(--color-receipt-border);
+}
+
+.receipt-edge-top {
+  top: 0;
+}
+
+.receipt-edge-bottom {
+  bottom: 0;
+  transform: rotate(180deg);
+}
