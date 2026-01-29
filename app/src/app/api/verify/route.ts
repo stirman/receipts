@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic();
-
 const SYSTEM_PROMPT = `You are an AI assistant that helps verify and structure predictions ("hot takes") for the Receipts app. Your job is to:
 
 1. Analyze if a prediction is verifiable (has a clear outcome, timeframe, and measurable result)
@@ -46,13 +44,18 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
-        { error: "AI verification is not configured" },
+        { error: "AI verification is not configured. Please add ANTHROPIC_API_KEY to environment variables." },
         { status: 500 }
       );
     }
 
+    // Initialize Anthropic client with API key
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-3-5-sonnet-20241022",
       max_tokens: 1024,
       messages: [
         {
@@ -69,14 +72,27 @@ export async function POST(request: NextRequest) {
       throw new Error("No text response from AI");
     }
 
-    // Parse the JSON response
-    const verification = JSON.parse(textContent.text);
+    // Parse the JSON response - handle potential markdown code blocks
+    let jsonText = textContent.text.trim();
+    if (jsonText.startsWith("```json")) {
+      jsonText = jsonText.slice(7);
+    }
+    if (jsonText.startsWith("```")) {
+      jsonText = jsonText.slice(3);
+    }
+    if (jsonText.endsWith("```")) {
+      jsonText = jsonText.slice(0, -3);
+    }
+    jsonText = jsonText.trim();
+
+    const verification = JSON.parse(jsonText);
 
     return NextResponse.json(verification);
   } catch (error) {
     console.error("Error verifying take:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to verify take" },
+      { error: `Failed to verify take: ${errorMessage}` },
       { status: 500 }
     );
   }
