@@ -1,6 +1,6 @@
 # Receipts — Build Progress
 
-## Current Status: Phase 2 - Database Complete
+## Current Status: Phase 2 - OG Images Complete
 
 **Started:** Jan 29, 2026 10:07 AM PT
 **Builder:** Rosie via Claude Code
@@ -22,7 +22,7 @@
 - [x] Add Pending state styling
 - [x] Add Verified state styling
 - [x] Add Wrong state styling
-- [ ] Open Graph image generation (og-image)
+- [x] Open Graph image generation (og-image)
 - [ ] Export as PNG for sharing
 
 ### AI Take Verification
@@ -97,6 +97,23 @@
   - Share button (copy link)
   - SEO meta tags
 
+**12:30 PM** — OG Image generation complete:
+- Installed @vercel/og for dynamic image generation
+- Created `/api/og/[id]/route.tsx` Edge API endpoint
+- Renders receipt card as 1200x630 OG image matching 2A design:
+  - Paper/cream background (#fafaf8)
+  - Monospace font styling
+  - RECEIPTS header with perforated edges
+  - Bold take text (truncated at 140 chars)
+  - FROM and LOCKED fields
+  - Status badge (pending=amber, verified=green, wrong=red)
+  - Resolves date for pending takes
+  - Hash at bottom
+- Updated `/take/[id]` page with OG image meta tags:
+  - OpenGraph images array with proper dimensions
+  - Twitter card with summary_large_image
+- Receipts now display beautifully when shared on Twitter/iMessage/etc.
+
 ---
 
 ## File Structure
@@ -108,6 +125,8 @@ app/
 ├── src/
 │   ├── app/
 │   │   ├── api/
+│   │   │   ├── og/
+│   │   │   │   └── [id]/route.tsx  # Dynamic OG image generation
 │   │   │   └── takes/
 │   │   │       ├── route.ts        # GET/POST takes
 │   │   │       └── [id]/route.ts   # GET single take
@@ -139,7 +158,7 @@ For Vercel deployment, add:
 
 ## Next Steps
 
-1. **Set up Neon database** - Create a Neon project and get connection string
-2. **Run migrations** - `npx prisma migrate dev` to create tables
-3. **Deploy to Vercel** - Add DATABASE_URL env var and deploy
-4. **Add OG image generation** - Dynamic share cards for each take
+1. **AI Take Verification** - Integrate Claude API for natural language parsing
+2. **NBA Data Integration** - Connect to NBA API for auto-resolution
+3. **User authentication** - Magic Link + Apple Sign In
+4. **Export as PNG** - Allow users to download receipt images

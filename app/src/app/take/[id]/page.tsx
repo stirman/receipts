@@ -18,6 +18,8 @@ export async function generateMetadata({
     return { title: "Take Not Found | Receipts" };
   }
 
+  const ogImageUrl = `/api/og/${id}`;
+
   return {
     title: `${take.author}'s Take | Receipts`,
     description: take.text,
@@ -25,11 +27,20 @@ export async function generateMetadata({
       title: `${take.author}'s Take | Receipts`,
       description: take.text,
       type: "website",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `Receipt for ${take.author}'s take: "${take.text.slice(0, 60)}..."`,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: `${take.author}'s Take | Receipts`,
       description: take.text,
+      images: [ogImageUrl],
     },
   };
 }

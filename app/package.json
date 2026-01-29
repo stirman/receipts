@@ -12,6 +12,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
     "@prisma/client": "^6.19.2",
+    "@vercel/og": "^0.8.6",
     "next": "16.1.6",
     "prisma": "^6.19.2",
     "react": "19.2.3",
