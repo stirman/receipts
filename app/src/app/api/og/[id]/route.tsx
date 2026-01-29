@@ -87,12 +87,12 @@ export async function GET(
           fontFamily: "monospace",
         }}
       >
-        {/* Receipt card */}
+        {/* Receipt card - portrait oriented like a real receipt */}
         <div
           style={{
-            width: 520,
+            width: 340,
             backgroundColor: COLORS.paper,
-            borderRadius: 12,
+            borderRadius: 8,
             display: "flex",
             flexDirection: "column",
             boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
@@ -105,17 +105,17 @@ export async function GET(
             style={{
               display: "flex",
               justifyContent: "center",
-              gap: 8,
-              padding: "12px 0",
+              gap: 6,
+              padding: "10px 0",
               borderBottom: `1px dashed ${COLORS.divider}`,
             }}
           >
-            {Array.from({ length: 25 }).map((_, i) => (
+            {Array.from({ length: 18 }).map((_, i) => (
               <div
                 key={i}
                 style={{
-                  width: 8,
-                  height: 8,
+                  width: 6,
+                  height: 6,
                   borderRadius: "50%",
                   backgroundColor: "#1a1a1f",
                 }}
@@ -126,7 +126,7 @@ export async function GET(
           {/* Content */}
           <div
             style={{
-              padding: "32px 40px",
+              padding: "24px 28px",
               display: "flex",
               flexDirection: "column",
             }}
@@ -137,14 +137,14 @@ export async function GET(
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                paddingBottom: 24,
+                paddingBottom: 16,
                 borderBottom: `2px dashed ${COLORS.divider}`,
-                marginBottom: 24,
+                marginBottom: 16,
               }}
             >
               <div
                 style={{
-                  fontSize: 20,
+                  fontSize: 16,
                   fontWeight: 600,
                   letterSpacing: "4px",
                   color: COLORS.textLight,
@@ -154,7 +154,7 @@ export async function GET(
               </div>
               <div
                 style={{
-                  fontSize: 10,
+                  fontSize: 8,
                   color: COLORS.textFaded,
                   letterSpacing: "2px",
                   marginTop: 4,
@@ -167,9 +167,9 @@ export async function GET(
             {/* Take text */}
             <div
               style={{
-                fontSize: 24,
+                fontSize: 20,
                 lineHeight: 1.4,
-                padding: "24px 16px",
+                padding: "20px 8px",
                 textAlign: "center",
                 fontWeight: 700,
                 color: "#000",
@@ -185,7 +185,7 @@ export async function GET(
               style={{
                 width: "100%",
                 borderTop: `1px dashed ${COLORS.divider}`,
-                margin: "16px 0",
+                margin: "12px 0",
               }}
             />
 
@@ -194,8 +194,8 @@ export async function GET(
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontSize: 14,
-                marginBottom: 8,
+                fontSize: 12,
+                marginBottom: 6,
               }}
             >
               <span style={{ color: COLORS.textMuted }}>FROM</span>
@@ -207,8 +207,8 @@ export async function GET(
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontSize: 14,
-                marginBottom: 8,
+                fontSize: 12,
+                marginBottom: 6,
               }}
             >
               <span style={{ color: COLORS.textMuted }}>LOCKED</span>
@@ -223,8 +223,8 @@ export async function GET(
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                paddingTop: 24,
-                marginTop: 16,
+                paddingTop: 16,
+                marginTop: 12,
                 borderTop: `2px dashed ${COLORS.divider}`,
               }}
             >
@@ -233,9 +233,9 @@ export async function GET(
                 style={{
                   backgroundColor: statusColors.bg,
                   color: statusColors.text,
-                  padding: "10px 24px",
-                  borderRadius: 6,
-                  fontSize: 14,
+                  padding: "8px 20px",
+                  borderRadius: 4,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "3px",
                 }}
@@ -247,9 +247,9 @@ export async function GET(
               {take.status === "PENDING" && take.resolvesAt && (
                 <div
                   style={{
-                    fontSize: 12,
+                    fontSize: 10,
                     color: COLORS.textLight,
-                    marginTop: 12,
+                    marginTop: 10,
                     display: "flex",
                   }}
                 >
@@ -269,9 +269,9 @@ export async function GET(
               {/* Hash */}
               <div
                 style={{
-                  fontSize: 10,
+                  fontSize: 9,
                   color: COLORS.textFaded,
-                  marginTop: 12,
+                  marginTop: 10,
                 }}
               >
                 {truncateHash(take.hash)}
@@ -284,17 +284,17 @@ export async function GET(
             style={{
               display: "flex",
               justifyContent: "center",
-              gap: 8,
-              padding: "12px 0",
+              gap: 6,
+              padding: "10px 0",
               borderTop: `1px dashed ${COLORS.divider}`,
             }}
           >
-            {Array.from({ length: 25 }).map((_, i) => (
+            {Array.from({ length: 18 }).map((_, i) => (
               <div
                 key={i}
                 style={{
-                  width: 8,
-                  height: 8,
+                  width: 6,
+                  height: 6,
                   borderRadius: "50%",
                   backgroundColor: "#1a1a1f",
                 }}
