@@ -1,8 +1,28 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useAuth, useUser, SignInButton } from "@clerk/nextjs";
 import type { Take, AIVerificationResult } from "@/lib/types";
+
+// Conditionally import Clerk - only use if configured
+const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+// Dynamic imports for Clerk hooks - only used at runtime when configured
+let useAuth: () => { isSignedIn: boolean | undefined };
+let useUser: () => { user: { username?: string; firstName?: string } | null | undefined };
+let SignInButton: React.ComponentType<{ mode?: string; fallbackRedirectUrl?: string; children: React.ReactNode }>;
+
+if (isClerkConfigured) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const clerk = require("@clerk/nextjs");
+  useAuth = clerk.useAuth;
+  useUser = clerk.useUser;
+  SignInButton = clerk.SignInButton;
+} else {
+  // Stub implementations when Clerk isn't configured
+  useAuth = () => ({ isSignedIn: false });
+  useUser = () => ({ user: null });
+  SignInButton = ({ children }) => <>{children}</>;
+}
 
 interface TakeFormProps {
   onSuccess?: (take: Take) => void;

@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import {
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from "@clerk/nextjs";
+import dynamic from "next/dynamic";
 
-const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+// Dynamically import Clerk components only when configured
+const ClerkAuth = dynamic(
+  () => import("./ClerkAuth").then(mod => mod.ClerkAuth),
+  { ssr: false }
+);
 
 export function Header() {
   return (
@@ -23,31 +21,7 @@ export function Header() {
           <p className="text-white/50 text-sm hidden sm:block">
             Hot takes with proof
           </p>
-          {isClerkConfigured ? (
-            <>
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="px-4 py-2 text-sm text-white/70 hover:text-white transition-colors">
-                    Sign In
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="px-4 py-2 text-sm bg-white text-black font-semibold rounded-lg hover:bg-white/90 transition-colors">
-                    Sign Up
-                  </button>
-                </SignUpButton>
-              </SignedOut>
-              <SignedIn>
-                <UserButton
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-9 h-9"
-                    }
-                  }}
-                />
-              </SignedIn>
-            </>
-          ) : null}
+          <ClerkAuth />
         </div>
       </div>
     </header>
