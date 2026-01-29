@@ -31,6 +31,19 @@ Guidelines:
 - Keep explanations concise and friendly`;
 
 export async function POST(request: NextRequest) {
+  // Check API key first
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY not found in environment variables" },
+      { status: 500 }
+    );
+  }
+
+  // Debug: Check key format (first 10 chars only for security)
+  const keyPreview = apiKey.substring(0, 10) + "...";
+  console.log("API Key preview:", keyPreview);
+
   try {
     const body = await request.json();
     const { take } = body;
@@ -42,17 +55,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: "AI verification is not configured. Please add ANTHROPIC_API_KEY to environment variables." },
-        { status: 500 }
-      );
-    }
-
     // Initialize Anthropic client with API key
     const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey: apiKey,
     });
+
+    console.log("Calling Anthropic API...");
 
     const message = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
@@ -66,10 +74,15 @@ export async function POST(request: NextRequest) {
       system: SYSTEM_PROMPT,
     });
 
+    console.log("Anthropic API response received");
+
     // Extract the text content from the response
     const textContent = message.content.find((block) => block.type === "text");
     if (!textContent || textContent.type !== "text") {
-      throw new Error("No text response from AI");
+      return NextResponse.json(
+        { error: "No text response from AI" },
+        { status: 500 }
+      );
     }
 
     // Parse the JSON response - handle potential markdown code blocks
@@ -85,14 +98,39 @@ export async function POST(request: NextRequest) {
     }
     jsonText = jsonText.trim();
 
-    const verification = JSON.parse(jsonText);
-
-    return NextResponse.json(verification);
-  } catch (error) {
+    try {
+      const verification = JSON.parse(jsonText);
+      return NextResponse.json(verification);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError, "Raw text:", jsonText);
+      return NextResponse.json(
+        { error: `Failed to parse AI response as JSON. Raw: ${jsonText.substring(0, 100)}...` },
+        { status: 500 }
+      );
+    }
+  } catch (error: unknown) {
     console.error("Error verifying take:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    // Handle Anthropic API errors specifically
+    if (error && typeof error === "object" && "status" in error) {
+      const apiError = error as { status: number; message?: string };
+      if (apiError.status === 401) {
+        return NextResponse.json(
+          { error: "Invalid Anthropic API key. Please check ANTHROPIC_API_KEY in Vercel environment variables." },
+          { status: 500 }
+        );
+      }
+      if (apiError.status === 429) {
+        return NextResponse.json(
+          { error: "Rate limited by Anthropic API. Please try again in a moment." },
+          { status: 500 }
+        );
+      }
+    }
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: `Failed to verify take: ${errorMessage}` },
+      { error: `AI verification failed: ${errorMessage}` },
       { status: 500 }
     );
   }
