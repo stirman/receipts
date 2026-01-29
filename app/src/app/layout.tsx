@@ -29,13 +29,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={`${inter.variable} ${spaceMono.variable} antialiased`}>
-          {children}
-        </body>
-      </html>
-    </ClerkProvider>
+  // Check if Clerk is configured - during build, env vars may not be available
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  const content = (
+    <html lang="en">
+      <body className={`${inter.variable} ${spaceMono.variable} antialiased`}>
+        {children}
+      </body>
+    </html>
   );
+
+  // Only wrap with ClerkProvider if the key is available
+  if (clerkKey) {
+    return <ClerkProvider publishableKey={clerkKey}>{content}</ClerkProvider>;
+  }
+  
+  return content;
 }
