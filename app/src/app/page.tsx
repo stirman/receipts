@@ -1,10 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { ReceiptCard } from "@/components/ReceiptCard";
-import { TakeForm } from "@/components/TakeForm";
 import { Header } from "@/components/Header";
 import type { Take } from "@/lib/types";
+
+// Dynamically import TakeForm to avoid Clerk SSR issues
+const TakeForm = dynamic(
+  () => import("@/components/TakeForm").then((mod) => mod.TakeForm),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="w-full max-w-md">
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+          <div className="h-32 bg-white/5 rounded-lg"></div>
+        </div>
+      </div>
+    )
+  }
+);
 
 export default function Home() {
   const [takes, setTakes] = useState<Take[]>([]);
