@@ -1,6 +1,6 @@
 # Receipts — Build Progress
 
-## Current Status: Phase 1 MVP In Progress
+## Current Status: Phase 2 - Database Complete
 
 **Started:** Jan 29, 2026 10:07 AM PT
 **Builder:** Rosie via Claude Code
@@ -12,10 +12,10 @@
 ### Project Setup
 - [x] Scaffold Next.js 14 project with App Router
 - [x] Set up Tailwind CSS + custom design system
-- [ ] Configure PostgreSQL (Vercel Postgres or Neon)
-- [ ] Set up Prisma ORM
+- [x] Configure PostgreSQL (Neon via Prisma)
+- [x] Set up Prisma ORM
 - [ ] Configure authentication (Magic Link + Apple Sign In)
-- [x] Set up Vercel deployment (ready - needs auth)
+- [x] Set up Vercel deployment (ready - needs DATABASE_URL env var)
 
 ### Receipt Card Component
 - [x] Implement Design 2A (Classic Clean) as React component
@@ -40,10 +40,10 @@
 
 ### Core Features
 - [x] Take submission form
-- [ ] Take detail page
+- [x] Take detail page
 - [ ] User profile page
-- [x] Public take feed
-- [ ] Share functionality
+- [x] Public take feed (real data from DB)
+- [x] Share functionality (copy link)
 
 ### App Clip (Later)
 - [ ] iOS App Clip target
@@ -79,9 +79,23 @@
   - Sample receipts grid (3 columns on desktop)
   - Header and footer
 
-**To deploy:**
-1. Run `vercel login` in the `/app` directory
-2. Run `vercel --prod` to deploy
+**11:00 AM** — Database layer complete:
+- Set up Prisma ORM with PostgreSQL
+- Created database schema:
+  - `Take` model: id, text, author, hash, timestamps, status, userId
+  - `User` model: id, username, email, wins, losses
+  - `TakeStatus` enum: PENDING, VERIFIED, WRONG
+- Built API routes:
+  - `GET /api/takes` - Fetch all takes (most recent first)
+  - `POST /api/takes` - Create a new take with SHA-256 hash
+  - `GET /api/takes/[id]` - Fetch single take
+- Updated TakeForm to submit to API with author name field
+- Homepage now fetches real takes from database
+- Built take detail page (`/take/[id]`) with:
+  - Full receipt display
+  - All metadata (locked date, hash)
+  - Share button (copy link)
+  - SEO meta tags
 
 ---
 
@@ -89,25 +103,43 @@
 
 ```
 app/
+├── prisma/
+│   └── schema.prisma       # Database schema
 ├── src/
 │   ├── app/
-│   │   ├── globals.css      # Tailwind + custom design system
-│   │   ├── layout.tsx       # Root layout with fonts
-│   │   └── page.tsx         # Homepage
-│   └── components/
-│       ├── ReceiptCard.tsx  # Design 2A receipt card
-│       └── TakeForm.tsx     # Take submission form
-├── public/
+│   │   ├── api/
+│   │   │   └── takes/
+│   │   │       ├── route.ts        # GET/POST takes
+│   │   │       └── [id]/route.ts   # GET single take
+│   │   ├── take/
+│   │   │   └── [id]/page.tsx       # Take detail page
+│   │   ├── globals.css             # Tailwind + design system
+│   │   ├── layout.tsx              # Root layout
+│   │   └── page.tsx                # Homepage
+│   ├── components/
+│   │   ├── ReceiptCard.tsx         # Design 2A receipt
+│   │   ├── TakeForm.tsx            # Take submission
+│   │   └── ShareButtons.tsx        # Share functionality
+│   └── lib/
+│       ├── db.ts                   # Prisma client singleton
+│       └── types.ts                # Shared TypeScript types
+├── .env                            # DATABASE_URL (not committed)
 ├── package.json
 └── tsconfig.json
 ```
 
 ---
 
+## Environment Variables
+
+For Vercel deployment, add:
+- `DATABASE_URL` - Neon PostgreSQL connection string
+
+---
+
 ## Next Steps
 
-1. **Deploy to Vercel** - Run `vercel login` then `vercel --prod`
-2. **Set up database** - Add Vercel Postgres or Neon
-3. **Add Prisma** - Define Take and User models
-4. **Build take detail page** - Individual receipt view with share buttons
-5. **Add OG image generation** - For social sharing
+1. **Set up Neon database** - Create a Neon project and get connection string
+2. **Run migrations** - `npx prisma migrate dev` to create tables
+3. **Deploy to Vercel** - Add DATABASE_URL env var and deploy
+4. **Add OG image generation** - Dynamic share cards for each take

@@ -1,0 +1,56 @@
+// Receipts - Hot Takes Accountability
+// Prisma schema for Vercel Postgres (Neon)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A hot take that gets locked and verified
+model Take {
+  id          String    @id @default(cuid())
+  text        String    @db.VarChar(280)
+  author      String    @default("Anonymous")
+  hash        String?   // SHA-256 hash for integrity verification
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  lockedAt    DateTime  @default(now())
+  resolvesAt  DateTime?
+  resolvedAt  DateTime?
+
+  // Status: pending | verified | wrong
+  status      TakeStatus @default(PENDING)
+
+  // Optional relation to user
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String?  @unique
+
+  // Record tracking
+  wins      Int      @default(0)
+  losses    Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  takes     Take[]
+}
+
+enum TakeStatus {
+  PENDING
+  VERIFIED
+  WRONG
+}

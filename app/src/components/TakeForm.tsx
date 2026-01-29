@@ -1,25 +1,49 @@
 "use client";
 
 import { useState } from "react";
+import type { Take } from "@/lib/types";
 
 interface TakeFormProps {
-  onSubmit: (take: string) => void;
+  onSuccess?: (take: Take) => void;
 }
 
-export function TakeForm({ onSubmit }: TakeFormProps) {
+export function TakeForm({ onSuccess }: TakeFormProps) {
   const [take, setTake] = useState("");
+  const [author, setAuthor] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!take.trim()) return;
 
     setIsSubmitting(true);
-    // Simulate API delay for now
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    onSubmit(take.trim());
-    setTake("");
-    setIsSubmitting(false);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/takes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: take.trim(),
+          author: author.trim() || "Anonymous",
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to submit take");
+      }
+
+      const newTake = await response.json();
+      setTake("");
+      setAuthor("");
+      onSuccess?.(newTake);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const characterCount = take.length;
@@ -43,6 +67,18 @@ export function TakeForm({ onSubmit }: TakeFormProps) {
           className="w-full h-32 bg-white/5 border border-white/10 rounded-lg p-4 text-white placeholder-white/30 resize-none focus:outline-none focus:border-white/30 transition-colors"
           disabled={isSubmitting}
         />
+        <input
+          type="text"
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+          placeholder="Your name (optional)"
+          className="w-full mt-3 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-colors text-sm"
+          disabled={isSubmitting}
+          maxLength={50}
+        />
+        {error && (
+          <p className="text-red-400 text-xs mt-2">{error}</p>
+        )}
         <div className="flex justify-between items-center mt-3">
           <span
             className={`text-xs ${
@@ -56,7 +92,7 @@ export function TakeForm({ onSubmit }: TakeFormProps) {
             disabled={!take.trim() || isOverLimit || isSubmitting}
             className="px-6 py-2.5 bg-white text-black font-semibold rounded-lg hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
           >
-            {isSubmitting ? "Locking..." : "Lock It In 🔒"}
+            {isSubmitting ? "Locking..." : "Lock It In"}
           </button>
         </div>
       </div>

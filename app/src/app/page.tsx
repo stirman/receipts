@@ -1,59 +1,33 @@
 "use client";
 
-import { useState } from "react";
-import { ReceiptCard, Take } from "@/components/ReceiptCard";
+import { useState, useEffect } from "react";
+import { ReceiptCard } from "@/components/ReceiptCard";
 import { TakeForm } from "@/components/TakeForm";
-
-// Sample data for demonstration
-const sampleTakes: Take[] = [
-  {
-    id: "1",
-    text: "Rockets will make the playoffs this season",
-    username: "stirman",
-    lockedAt: new Date("2026-01-29"),
-    resolvesAt: new Date("2026-04-13"),
-    status: "pending",
-    hash: "7f3a9c2eb8d4f1a6c3e5b7d9f2a4c6e8b4d1",
-  },
-  {
-    id: "2",
-    text: "Jalen Green will average 25+ PPG",
-    username: "rocketsfan",
-    lockedAt: new Date("2026-01-15"),
-    resolvesAt: new Date("2026-04-13"),
-    status: "verified",
-    hash: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8",
-  },
-  {
-    id: "3",
-    text: "Lakers winning the championship",
-    username: "lakernation",
-    lockedAt: new Date("2025-10-01"),
-    resolvesAt: new Date("2026-06-15"),
-    status: "wrong",
-    hash: "f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1",
-  },
-];
-
-function generateHash(): string {
-  return Array.from({ length: 32 }, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  ).join("");
-}
+import type { Take } from "@/lib/types";
 
 export default function Home() {
-  const [takes, setTakes] = useState<Take[]>(sampleTakes);
+  const [takes, setTakes] = useState<Take[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleNewTake = (text: string) => {
-    const newTake: Take = {
-      id: Date.now().toString(),
-      text,
-      username: "you",
-      lockedAt: new Date(),
-      resolvesAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
-      status: "pending",
-      hash: generateHash(),
-    };
+  const fetchTakes = async () => {
+    try {
+      const response = await fetch("/api/takes");
+      if (response.ok) {
+        const data = await response.json();
+        setTakes(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch takes:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTakes();
+  }, []);
+
+  const handleNewTake = (newTake: Take) => {
     setTakes([newTake, ...takes]);
   };
 
@@ -86,7 +60,7 @@ export default function Home() {
 
         {/* Take Form */}
         <div className="flex justify-center mb-16">
-          <TakeForm onSubmit={handleNewTake} />
+          <TakeForm onSuccess={handleNewTake} />
         </div>
       </section>
 
@@ -95,11 +69,21 @@ export default function Home() {
         <h2 className="text-xl font-semibold mb-8 text-white/80">
           Recent Takes
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
-          {takes.map((take) => (
-            <ReceiptCard key={take.id} take={take} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center text-white/50 py-12">
+            Loading takes...
+          </div>
+        ) : takes.length === 0 ? (
+          <div className="text-center text-white/50 py-12">
+            No takes yet. Be the first to lock one in!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+            {takes.map((take) => (
+              <ReceiptCard key={take.id} take={take} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Footer */}
