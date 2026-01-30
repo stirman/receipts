@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ThumbsUp, ThumbsDown, Trash2 } from "lucide-react";
 import { AgreementSection } from "./AgreementSection";
 import { ShareButtons } from "./ShareButtons";
+import { ConfirmModal } from "./ConfirmModal";
 
 interface TakeDetailProps {
   take: {
@@ -49,10 +51,59 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function TakeDetail({ take }: TakeDetailProps) {
+  const router = useRouter();
   const [userPosition, setUserPosition] = useState<"AGREE" | "DISAGREE" | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Check admin status
+  useEffect(() => {
+    async function checkAdmin() {
+      try {
+        const res = await fetch("/api/admin/status");
+        if (res.ok) {
+          const data = await res.json();
+          setIsAdmin(data.isAdmin);
+        }
+      } catch {
+        // Not admin
+      }
+    }
+    checkAdmin();
+  }, []);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/take/${take.id}/admin-delete`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        router.push("/");
+      } else {
+        console.error("Failed to delete");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <>
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="Delete this take?"
+        message={`This will permanently delete "${take.text.slice(0, 50)}..." and all associated agreements.`}
+        confirmText={deleting ? "Deleting..." : "Delete"}
+        confirmColor="red"
+      />
+
       {/* Receipt Card - Portrait oriented like a real receipt */}
       <div className="flex justify-center">
         <div className="w-[340px] bg-receipt-paper text-receipt-text font-mono relative shadow-[0_20px_60px_rgba(0,0,0,0.3)] rounded">
@@ -153,6 +204,19 @@ export function TakeDetail({ take }: TakeDetailProps) {
         <p className="text-white/50 text-sm mb-4">Share this receipt</p>
         <ShareButtons takeId={take.id} />
       </div>
+
+      {/* Admin delete button */}
+      {isAdmin && (
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg text-sm transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Take (Admin)
+          </button>
+        </div>
+      )}
     </>
   );
 }

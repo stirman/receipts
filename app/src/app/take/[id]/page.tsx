@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import type { Metadata } from "next";
 import { Header } from "@/components/Header";
 import { TakeDetail } from "@/components/TakeDetail";
@@ -72,13 +71,6 @@ export default async function TakePage({ params }: TakePageProps) {
 
       {/* Take Detail */}
       <main className="max-w-6xl mx-auto px-4 py-12">
-        <Link
-          href="/"
-          className="inline-flex items-center text-white/50 hover:text-white/80 mb-8 text-sm"
-        >
-          ← Back to all takes
-        </Link>
-
         <TakeDetail take={serializedTake} />
       </main>
 

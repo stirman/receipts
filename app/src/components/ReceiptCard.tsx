@@ -3,7 +3,11 @@ import { ThumbsUp, ThumbsDown } from "lucide-react";
 import type { Take, TakeStatus } from "@/lib/types";
 
 interface ReceiptCardProps {
-  take: Take & { userPosition?: "AGREE" | "DISAGREE" | null };
+  take: Take & { 
+    userPosition?: "AGREE" | "DISAGREE" | null;
+    agreeCount?: number;
+    disagreeCount?: number;
+  };
 }
 
 function formatDate(dateStr: string): string {
@@ -42,6 +46,8 @@ function StatusBadge({ status }: { status: TakeStatus }) {
 }
 
 export function ReceiptCard({ take }: ReceiptCardProps) {
+  const hasEngagement = (take.agreeCount || 0) > 0 || (take.disagreeCount || 0) > 0;
+  
   return (
     <Link href={`/take/${take.id}`} className="block hover:opacity-95 transition-opacity">
       <div className="w-[340px] bg-receipt-paper text-receipt-text font-mono relative shadow-[0_20px_60px_rgba(0,0,0,0.3)] rounded cursor-pointer">
@@ -99,6 +105,23 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
                     DISAGREED
                   </>
                 )}
+              </span>
+            </div>
+          )}
+
+          {/* Community engagement */}
+          {hasEngagement && (
+            <div className="flex justify-between items-center text-xs mb-2">
+              <span className="text-receipt-text-muted">COMMUNITY</span>
+              <span className="flex items-center gap-3 font-semibold">
+                <span className="flex items-center gap-1 text-green-700">
+                  <ThumbsUp className="w-3 h-3" />
+                  {take.agreeCount || 0}
+                </span>
+                <span className="flex items-center gap-1 text-red-700">
+                  <ThumbsDown className="w-3 h-3" />
+                  {take.disagreeCount || 0}
+                </span>
               </span>
             </div>
           )}

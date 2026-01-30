@@ -100,6 +100,7 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
   const handleMakeClearer = async () => {
     setStep("suggesting");
     setError(null);
+    setVerification(null);
 
     try {
       const response = await fetch("/api/suggest", {
@@ -113,13 +114,15 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
       }
 
       const result = await response.json();
-      if (result.suggestedTake) {
-        setTake(result.suggestedTake);
+      const suggestion = result.suggestedTake || result.suggestion;
+      
+      if (suggestion) {
+        // Update take and go back to input in one render cycle
+        setTake(suggestion);
       }
-      setStep("input");
-      setVerification(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
       setStep("input");
     }
   };
