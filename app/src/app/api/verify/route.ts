@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 const SYSTEM_PROMPT = `You are an AI assistant that helps verify and structure predictions ("hot takes") for the Receipts app. Your job is to:
 
@@ -32,17 +32,13 @@ Guidelines:
 
 export async function POST(request: NextRequest) {
   // Check API key first
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not found in environment variables" },
+      { error: "OPENAI_API_KEY not found in environment variables" },
       { status: 500 }
     );
   }
-
-  // Debug: Check key format (first 10 chars only for security)
-  const keyPreview = apiKey.substring(0, 10) + "...";
-  console.log("API Key preview:", keyPreview);
 
   try {
     const body = await request.json();
@@ -55,74 +51,66 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Anthropic client with API key
-    const anthropic = new Anthropic({
+    // Initialize OpenAI client
+    const openai = new OpenAI({
       apiKey: apiKey,
     });
 
-    console.log("Calling Anthropic API...");
+    console.log("Calling OpenAI API (gpt-4o-mini)...");
 
-    const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       max_tokens: 1024,
       messages: [
+        {
+          role: "system",
+          content: SYSTEM_PROMPT,
+        },
         {
           role: "user",
           content: `Please analyze this prediction and provide structured verification data:\n\n"${take}"`,
         },
       ],
-      system: SYSTEM_PROMPT,
+      response_format: { type: "json_object" },
     });
 
-    console.log("Anthropic API response received");
+    console.log("OpenAI API response received");
 
     // Extract the text content from the response
-    const textContent = message.content.find((block) => block.type === "text");
-    if (!textContent || textContent.type !== "text") {
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
       return NextResponse.json(
-        { error: "No text response from AI" },
+        { error: "No response from AI" },
         { status: 500 }
       );
     }
 
-    // Parse the JSON response - handle potential markdown code blocks
-    let jsonText = textContent.text.trim();
-    if (jsonText.startsWith("```json")) {
-      jsonText = jsonText.slice(7);
-    }
-    if (jsonText.startsWith("```")) {
-      jsonText = jsonText.slice(3);
-    }
-    if (jsonText.endsWith("```")) {
-      jsonText = jsonText.slice(0, -3);
-    }
-    jsonText = jsonText.trim();
-
+    // Parse the JSON response
     try {
-      const verification = JSON.parse(jsonText);
+      const verification = JSON.parse(content);
       return NextResponse.json(verification);
     } catch (parseError) {
-      console.error("JSON parse error:", parseError, "Raw text:", jsonText);
+      console.error("JSON parse error:", parseError, "Raw text:", content);
       return NextResponse.json(
-        { error: `Failed to parse AI response as JSON. Raw: ${jsonText.substring(0, 100)}...` },
+        { error: `Failed to parse AI response as JSON. Raw: ${content.substring(0, 100)}...` },
         { status: 500 }
       );
     }
   } catch (error: unknown) {
     console.error("Error verifying take:", error);
     
-    // Handle Anthropic API errors specifically
+    // Handle OpenAI API errors specifically
     if (error && typeof error === "object" && "status" in error) {
       const apiError = error as { status: number; message?: string };
       if (apiError.status === 401) {
         return NextResponse.json(
-          { error: "Invalid Anthropic API key. Please check ANTHROPIC_API_KEY in Vercel environment variables." },
+          { error: "Invalid OpenAI API key. Please check OPENAI_API_KEY in environment variables." },
           { status: 500 }
         );
       }
       if (apiError.status === 429) {
         return NextResponse.json(
-          { error: "Rate limited by Anthropic API. Please try again in a moment." },
+          { error: "Rate limited by OpenAI API. Please try again in a moment." },
           { status: 500 }
         );
       }
