@@ -64,7 +64,7 @@ export default function Home() {
         </p>
 
         {/* Take Form */}
-        <div className="flex justify-center mb-16">
+        <div id="create" className="flex justify-center mb-16 scroll-mt-24">
           <TakeForm onSuccess={handleNewTake} />
         </div>
       </section>
