@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link2, Twitter, Download, Share2 } from "lucide-react";
+import { Link2, Twitter, Download } from "lucide-react";
 
 interface ShareButtonsProps {
   takeId?: string;
@@ -10,7 +10,6 @@ interface ShareButtonsProps {
 export function ShareButtons({ takeId }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [sharingToX, setSharingToX] = useState(false);
 
   const getShareUrl = () => {
     if (typeof window === "undefined") return "";
@@ -27,89 +26,14 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
     }
   };
 
-  const getImageBlob = async (): Promise<Blob | null> => {
-    if (!takeId) return null;
-    try {
-      const response = await fetch(`/api/og/${takeId}`);
-      return await response.blob();
-    } catch (err) {
-      console.error("Failed to fetch image:", err);
-      return null;
-    }
-  };
-
-  const handleShareToX = async () => {
-    if (!takeId) {
-      // Fallback to basic share without image
-      const url = getShareUrl();
-      const text = "Check out my take on Receipts 🧾";
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-      window.open(twitterUrl, "_blank", "width=550,height=420");
-      return;
-    }
-
-    setSharingToX(true);
-    
-    try {
-      // Try native share with image first (works on mobile)
-      if (navigator.share && navigator.canShare) {
-        const blob = await getImageBlob();
-        if (blob) {
-          const file = new File([blob], `receipt-${takeId}.png`, { type: "image/png" });
-          const shareData = {
-            title: "My Receipt",
-            text: "Check out my take on Receipts 🧾",
-            url: getShareUrl(),
-            files: [file],
-          };
-          
-          if (navigator.canShare(shareData)) {
-            await navigator.share(shareData);
-            setSharingToX(false);
-            return;
-          }
-        }
-      }
-      
-      // Fallback: Download image then open X compose
-      // This copies image to clipboard on supported browsers
-      const blob = await getImageBlob();
-      if (blob) {
-        try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob }),
-          ]);
-        } catch {
-          // Clipboard write not supported, continue anyway
-        }
-      }
-      
-      // Open X with text (user can paste image)
-      const url = getShareUrl();
-      const text = "Check out my take on Receipts 🧾 (image copied to clipboard!)";
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-      window.open(twitterUrl, "_blank", "width=550,height=420");
-    } catch (err) {
-      console.error("Share failed:", err);
-      // Final fallback
-      const url = getShareUrl();
-      const text = "Check out my take on Receipts 🧾";
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-      window.open(twitterUrl, "_blank", "width=550,height=420");
-    } finally {
-      setSharingToX(false);
-    }
-  };
-
   const handleDownloadImage = async () => {
     if (!takeId) return;
     
     setDownloading(true);
     try {
-      const blob = await getImageBlob();
-      if (!blob) throw new Error("Failed to get image");
+      const response = await fetch(`/api/og/${takeId}`);
+      const blob = await response.blob();
       
-      // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -125,41 +49,19 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
     }
   };
 
-  const handleNativeShare = async () => {
-    if (!navigator.share) return;
-    
-    try {
-      // Try to share with image if supported
-      if (takeId && navigator.canShare) {
-        const blob = await getImageBlob();
-        if (blob) {
-          const file = new File([blob], `receipt-${takeId}.png`, { type: "image/png" });
-          const shareData = {
-            title: "My Receipt",
-            text: "Check out my take on Receipts 🧾",
-            url: getShareUrl(),
-            files: [file],
-          };
-          
-          if (navigator.canShare(shareData)) {
-            await navigator.share(shareData);
-            return;
-          }
-        }
-      }
-      
-      // Fallback to basic share
-      await navigator.share({
-        title: "My Receipt",
-        text: "Check out my take on Receipts 🧾",
-        url: getShareUrl(),
-      });
-    } catch (err) {
-      console.log("Share cancelled or failed:", err);
-    }
+  const handleShareToX = () => {
+    const url = getShareUrl();
+    const text = "Check out this take 🧾";
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, "_blank", "width=550,height=420");
   };
 
-  const canNativeShare = typeof navigator !== "undefined" && navigator.share;
+  const handleShareToReddit = () => {
+    const url = getShareUrl();
+    const title = "Check out this take on Receipts";
+    const redditUrl = `https://reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+    window.open(redditUrl, "_blank");
+  };
 
   return (
     <div className="flex flex-wrap justify-center gap-3">
@@ -169,15 +71,6 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
       >
         <Link2 className="w-4 h-4" />
         {copied ? "Copied!" : "Copy Link"}
-      </button>
-
-      <button
-        onClick={handleShareToX}
-        disabled={sharingToX}
-        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors disabled:opacity-50"
-      >
-        <Twitter className="w-4 h-4" />
-        {sharingToX ? "Preparing..." : "Share to X"}
       </button>
 
       {takeId && (
@@ -191,15 +84,23 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
         </button>
       )}
 
-      {canNativeShare && (
-        <button
-          onClick={handleNativeShare}
-          className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
-        >
-          <Share2 className="w-4 h-4" />
-          More
-        </button>
-      )}
+      <button
+        onClick={handleShareToX}
+        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+      >
+        <Twitter className="w-4 h-4" />
+        Share to X
+      </button>
+
+      <button
+        onClick={handleShareToReddit}
+        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
+        </svg>
+        Reddit
+      </button>
     </div>
   );
 }
