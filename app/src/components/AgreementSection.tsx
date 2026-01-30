@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 
 interface Agreement {
@@ -21,16 +21,23 @@ interface AgreementData {
 interface AgreementSectionProps {
   takeId: string;
   status: string;
+  authorUsername: string;
+  onPositionChange?: (position: "AGREE" | "DISAGREE" | null) => void;
 }
 
-export function AgreementSection({ takeId, status }: AgreementSectionProps) {
+export function AgreementSection({ takeId, status, authorUsername, onPositionChange }: AgreementSectionProps) {
   const { isSignedIn } = useAuth();
   const { redirectToSignIn } = useClerk();
+  const { user } = useUser();
   const [data, setData] = useState<AgreementData | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const isResolved = status !== "PENDING";
+  
+  // Check if viewing own take
+  const currentUsername = user?.username || user?.firstName || "";
+  const isOwnTake = currentUsername.toLowerCase() === authorUsername.toLowerCase();
 
   useEffect(() => {
     fetchAgreements();
@@ -42,6 +49,8 @@ export function AgreementSection({ takeId, status }: AgreementSectionProps) {
       if (res.ok) {
         const agreementData = await res.json();
         setData(agreementData);
+        // Notify parent of position change
+        onPositionChange?.(agreementData.userPosition);
       }
     } catch (error) {
       console.error("Failed to fetch agreements:", error);
@@ -123,34 +132,51 @@ export function AgreementSection({ takeId, status }: AgreementSectionProps) {
 
   return (
     <div className="mt-8 w-full max-w-md mx-auto">
-      {/* Vote Buttons - Only show for pending takes */}
+      {/* Vote Buttons / Static Counts */}
       {!isResolved && (
         <div className="flex gap-4 justify-center mb-6">
-          <button
-            onClick={() => userPosition === "AGREE" ? handleRemoveVote() : handleVote("AGREE")}
-            disabled={submitting}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-              userPosition === "AGREE"
-                ? "bg-green-600 text-white"
-                : "bg-white/10 text-white hover:bg-white/20"
-            } ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            <ThumbsUp className="w-5 h-5" />
-            <span>Agree ({agreeCount})</span>
-          </button>
-          
-          <button
-            onClick={() => userPosition === "DISAGREE" ? handleRemoveVote() : handleVote("DISAGREE")}
-            disabled={submitting}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-              userPosition === "DISAGREE"
-                ? "bg-red-600 text-white"
-                : "bg-white/10 text-white hover:bg-white/20"
-            } ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            <ThumbsDown className="w-5 h-5" />
-            <span>Disagree ({disagreeCount})</span>
-          </button>
+          {isOwnTake ? (
+            // Own take: show static counts, not interactive buttons
+            <>
+              <div className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-green-600/20 text-green-400 border border-green-600/30">
+                <ThumbsUp className="w-5 h-5" />
+                <span>Agree ({agreeCount})</span>
+              </div>
+              <div className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-red-600/20 text-red-400 border border-red-600/30">
+                <ThumbsDown className="w-5 h-5" />
+                <span>Disagree ({disagreeCount})</span>
+              </div>
+            </>
+          ) : (
+            // Others' takes: interactive buttons with green/red colors
+            <>
+              <button
+                onClick={() => userPosition === "AGREE" ? handleRemoveVote() : handleVote("AGREE")}
+                disabled={submitting}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+                  userPosition === "AGREE"
+                    ? "bg-green-600 text-white ring-2 ring-green-400"
+                    : "bg-green-600 text-white hover:bg-green-500"
+                } ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <ThumbsUp className="w-5 h-5" />
+                <span>Agree ({agreeCount})</span>
+              </button>
+              
+              <button
+                onClick={() => userPosition === "DISAGREE" ? handleRemoveVote() : handleVote("DISAGREE")}
+                disabled={submitting}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+                  userPosition === "DISAGREE"
+                    ? "bg-red-600 text-white ring-2 ring-red-400"
+                    : "bg-red-600 text-white hover:bg-red-500"
+                } ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <ThumbsDown className="w-5 h-5" />
+                <span>Disagree ({disagreeCount})</span>
+              </button>
+            </>
+          )}
         </div>
       )}
 

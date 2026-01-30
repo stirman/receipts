@@ -2,9 +2,8 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ShareButtons } from "@/components/ShareButtons";
 import { Header } from "@/components/Header";
-import { AgreementSection } from "@/components/AgreementSection";
+import { TakeDetail } from "@/components/TakeDetail";
 
 interface TakePageProps {
   params: Promise<{ id: string }>;
@@ -47,37 +46,6 @@ export async function generateMetadata({
   };
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function StatusBadge({ status }: { status: string }) {
-  // Map internal status to display labels
-  const labels: Record<string, string> = {
-    PENDING: "PENDING",
-    VERIFIED: "TRUE",
-    WRONG: "FALSE",
-  };
-
-  const styles: Record<string, string> = {
-    PENDING: "bg-status-pending-bg text-status-pending-text",
-    VERIFIED: "bg-green-600 text-white",
-    WRONG: "bg-red-600 text-white",
-  };
-
-  return (
-    <span
-      className={`inline-block px-5 py-2 text-sm font-bold rounded tracking-widest ${styles[status]}`}
-    >
-      {labels[status]}
-    </span>
-  );
-}
-
 export default async function TakePage({ params }: TakePageProps) {
   const { id } = await params;
   const take = await prisma.take.findUnique({ where: { id } });
@@ -85,6 +53,18 @@ export default async function TakePage({ params }: TakePageProps) {
   if (!take) {
     notFound();
   }
+
+  // Serialize dates for client component
+  const serializedTake = {
+    id: take.id,
+    text: take.text,
+    author: take.author,
+    hash: take.hash,
+    status: take.status,
+    lockedAt: take.lockedAt.toISOString(),
+    resolvesAt: take.resolvesAt?.toISOString() || null,
+    resolvedAt: take.resolvedAt?.toISOString() || null,
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -99,76 +79,7 @@ export default async function TakePage({ params }: TakePageProps) {
           ← Back to all takes
         </Link>
 
-        {/* Receipt Card - Portrait oriented like a real receipt */}
-        <div className="flex justify-center">
-          <div className="w-[340px] bg-receipt-paper text-receipt-text font-mono relative shadow-[0_20px_60px_rgba(0,0,0,0.3)] rounded">
-            {/* Perforated top edge */}
-            <div className="receipt-edge-top" />
-
-            {/* Content */}
-            <div className="px-6 pt-10 pb-10">
-              {/* Header */}
-              <div className="text-center pb-5 border-b-2 border-dashed border-receipt-divider mb-5">
-                <div className="text-base font-semibold tracking-[4px] text-receipt-text-light">
-                  RECEIPTS
-                </div>
-                <div className="text-[0.55rem] text-receipt-text-faded tracking-wider">
-                  HOT TAKES • LOCKED IN
-                </div>
-                {take.hash && (
-                  <div className="text-[0.6rem] text-receipt-text-faded mt-1.5 font-mono">
-                    #{take.hash.slice(0, 8)}...{take.hash.slice(-4)}
-                  </div>
-                )}
-              </div>
-
-              {/* Take text */}
-              <div className="text-xl leading-relaxed py-6 px-2 text-center font-bold text-black">
-                &ldquo;{take.text}&rdquo;
-              </div>
-
-              {/* Divider */}
-              <hr className="border-t border-dashed border-receipt-divider my-4" />
-
-              {/* Meta rows */}
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-receipt-text-muted">FROM</span>
-                  <span className="font-semibold">@{take.author}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-receipt-text-muted">LOCKED</span>
-                  <span className="font-semibold">{formatDate(take.lockedAt)}</span>
-                </div>
-              </div>
-
-              {/* Status section */}
-              <div className="text-center pt-5 mt-4 border-t-2 border-dashed border-receipt-divider">
-                <StatusBadge status={take.status} />
-                {take.resolvesAt && (
-                  <div className="text-[0.7rem] text-receipt-text-light mt-2.5">
-                    {take.status === "PENDING" ? "Resolves" : "Resolved"}{" "}
-                    <span className="font-semibold text-receipt-text">
-                      {formatDate(take.resolvesAt)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Perforated bottom edge */}
-            <div className="receipt-edge-bottom" />
-          </div>
-        </div>
-
-        {/* Agreement Section */}
-        <AgreementSection takeId={take.id} status={take.status} />
-
-        {/* Share section */}
-        <div className="mt-8 text-center">
-          <p className="text-white/50 text-sm mb-4">Share this receipt</p>
-          <ShareButtons takeId={take.id} />
-        </div>
+        <TakeDetail take={serializedTake} />
       </main>
 
       {/* Footer */}
