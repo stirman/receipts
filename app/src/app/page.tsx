@@ -21,13 +21,16 @@ const TakeForm = dynamic(
   }
 );
 
+type TakeWithPosition = Take & { userPosition?: "AGREE" | "DISAGREE" | null };
+
 export default function Home() {
-  const [takes, setTakes] = useState<Take[]>([]);
+  const [takes, setTakes] = useState<TakeWithPosition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchTakes = async () => {
     try {
-      const response = await fetch("/api/takes");
+      // Use trending endpoint to get takes sorted by engagement
+      const response = await fetch("/api/takes/trending");
       if (response.ok) {
         const data = await response.json();
         setTakes(data);
@@ -44,7 +47,7 @@ export default function Home() {
   }, []);
 
   const handleNewTake = (newTake: Take) => {
-    setTakes([newTake, ...takes]);
+    setTakes([{ ...newTake, userPosition: null }, ...takes]);
   };
 
   return (
@@ -69,10 +72,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Recent Takes */}
+      {/* Trending Takes */}
       <section className="max-w-6xl mx-auto px-4 pb-20">
         <h2 className="text-xl font-semibold mb-8 text-white/80">
-          Recent Takes
+          🔥 Trending Takes
         </h2>
         {isLoading ? (
           <div className="text-center text-white/50 py-12">

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 
 const SYSTEM_PROMPT = `You are an AI assistant that helps verify and structure predictions ("hot takes") for the Receipts app. Your job is to:
@@ -30,6 +32,72 @@ Guidelines:
 - refinedTake should be the polished version users will see on their receipt
 - Keep explanations concise and friendly`;
 
+const CONFLICT_CHECK_PROMPT = `You are checking if a new prediction contradicts or conflicts with existing predictions from the same user.
+
+A conflict exists if:
+1. The new take predicts the OPPOSITE outcome of an existing take on the same subject
+2. The new take is logically incompatible with an existing take
+
+Examples of conflicts:
+- "Team X will make the playoffs" conflicts with "Team X will miss the playoffs"
+- "Bitcoin will hit $100k" conflicts with "Bitcoin will crash below $50k"
+- "Movie X will win Best Picture" conflicts with "Movie X will flop at the box office"
+
+NOT conflicts (these are fine):
+- Different subjects entirely
+- Same direction predictions with different specifics
+- Predictions about different time periods
+
+Respond with JSON:
+{
+  "hasConflict": boolean,
+  "conflictingTakeId": "id of the conflicting take or null",
+  "conflictingTakeText": "text of the conflicting take or null",
+  "explanation": "brief explanation of why they conflict, or null if no conflict"
+}`;
+
+async function checkForConflicts(
+  openai: OpenAI,
+  newTake: string,
+  existingTakes: { id: string; text: string }[]
+): Promise<{ hasConflict: boolean; conflictingTakeText?: string; explanation?: string }> {
+  if (existingTakes.length === 0) {
+    return { hasConflict: false };
+  }
+
+  const existingTakesText = existingTakes
+    .map((t, i) => `${i + 1}. [ID: ${t.id}] "${t.text}"`)
+    .join("\n");
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 512,
+      messages: [
+        { role: "system", content: CONFLICT_CHECK_PROMPT },
+        {
+          role: "user",
+          content: `New prediction: "${newTake}"\n\nExisting predictions from this user:\n${existingTakesText}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) return { hasConflict: false };
+
+    const result = JSON.parse(content);
+    return {
+      hasConflict: result.hasConflict,
+      conflictingTakeText: result.conflictingTakeText,
+      explanation: result.explanation,
+    };
+  } catch (error) {
+    console.error("Error checking for conflicts:", error);
+    return { hasConflict: false }; // Don't block on conflict check errors
+  }
+}
+
 export async function POST(request: NextRequest) {
   // Check API key first
   const apiKey = process.env.OPENAI_API_KEY;
@@ -52,9 +120,45 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: apiKey,
-    });
+    const openai = new OpenAI({ apiKey });
+
+    // Check for conflicting takes if user is authenticated
+    const { userId: clerkUserId } = await auth();
+    if (clerkUserId) {
+      const user = await prisma.user.findUnique({
+        where: { clerkId: clerkUserId },
+        select: { id: true },
+      });
+
+      if (user) {
+        // Get user's existing pending takes
+        const existingTakes = await prisma.take.findMany({
+          where: {
+            clerkUserId,
+            status: "PENDING",
+          },
+          select: { id: true, text: true },
+        });
+
+        if (existingTakes.length > 0) {
+          const conflictCheck = await checkForConflicts(openai, take, existingTakes);
+          
+          if (conflictCheck.hasConflict) {
+            return NextResponse.json({
+              isVerifiable: false,
+              refinedTake: null,
+              subject: null,
+              prediction: null,
+              timeframe: null,
+              resolutionCriteria: null,
+              suggestedResolutionDate: null,
+              explanation: `This take conflicts with one of your existing takes: "${conflictCheck.conflictingTakeText}". ${conflictCheck.explanation || "You can't have contradicting positions on the same subject."}`,
+              hasConflict: true,
+            });
+          }
+        }
+      }
+    }
 
     console.log("Calling OpenAI API (gpt-4o-mini)...");
 
@@ -62,10 +166,7 @@ export async function POST(request: NextRequest) {
       model: "gpt-4o-mini",
       max_tokens: 1024,
       messages: [
-        {
-          role: "system",
-          content: SYSTEM_PROMPT,
-        },
+        { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
           content: `Please analyze this prediction and provide structured verification data:\n\n"${take}"`,
@@ -76,7 +177,6 @@ export async function POST(request: NextRequest) {
 
     console.log("OpenAI API response received");
 
-    // Extract the text content from the response
     const content = completion.choices[0]?.message?.content;
     if (!content) {
       return NextResponse.json(
@@ -85,7 +185,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse the JSON response
     try {
       const verification = JSON.parse(content);
       return NextResponse.json(verification);
@@ -99,7 +198,6 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error("Error verifying take:", error);
     
-    // Handle OpenAI API errors specifically
     if (error && typeof error === "object" && "status" in error) {
       const apiError = error as { status: number; message?: string };
       if (apiError.status === 401) {
@@ -123,4 +221,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-// Force redeploy Fri Jan 30 12:46:18 PST 2026

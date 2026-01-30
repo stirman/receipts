@@ -10,6 +10,7 @@ interface ShareButtonsProps {
 export function ShareButtons({ takeId }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [sharingToX, setSharingToX] = useState(false);
 
   const getShareUrl = () => {
     if (typeof window === "undefined") return "";
@@ -26,11 +27,78 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
     }
   };
 
-  const handleShareToX = () => {
-    const url = getShareUrl();
-    const text = "Check out my take on Receipts 🧾";
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-    window.open(twitterUrl, "_blank", "width=550,height=420");
+  const getImageBlob = async (): Promise<Blob | null> => {
+    if (!takeId) return null;
+    try {
+      const response = await fetch(`/api/og/${takeId}`);
+      return await response.blob();
+    } catch (err) {
+      console.error("Failed to fetch image:", err);
+      return null;
+    }
+  };
+
+  const handleShareToX = async () => {
+    if (!takeId) {
+      // Fallback to basic share without image
+      const url = getShareUrl();
+      const text = "Check out my take on Receipts 🧾";
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      window.open(twitterUrl, "_blank", "width=550,height=420");
+      return;
+    }
+
+    setSharingToX(true);
+    
+    try {
+      // Try native share with image first (works on mobile)
+      if (navigator.share && navigator.canShare) {
+        const blob = await getImageBlob();
+        if (blob) {
+          const file = new File([blob], `receipt-${takeId}.png`, { type: "image/png" });
+          const shareData = {
+            title: "My Receipt",
+            text: "Check out my take on Receipts 🧾",
+            url: getShareUrl(),
+            files: [file],
+          };
+          
+          if (navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            setSharingToX(false);
+            return;
+          }
+        }
+      }
+      
+      // Fallback: Download image then open X compose
+      // This copies image to clipboard on supported browsers
+      const blob = await getImageBlob();
+      if (blob) {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ "image/png": blob }),
+          ]);
+        } catch {
+          // Clipboard write not supported, continue anyway
+        }
+      }
+      
+      // Open X with text (user can paste image)
+      const url = getShareUrl();
+      const text = "Check out my take on Receipts 🧾 (image copied to clipboard!)";
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      window.open(twitterUrl, "_blank", "width=550,height=420");
+    } catch (err) {
+      console.error("Share failed:", err);
+      // Final fallback
+      const url = getShareUrl();
+      const text = "Check out my take on Receipts 🧾";
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      window.open(twitterUrl, "_blank", "width=550,height=420");
+    } finally {
+      setSharingToX(false);
+    }
   };
 
   const handleDownloadImage = async () => {
@@ -38,9 +106,8 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
     
     setDownloading(true);
     try {
-      // Use the OG image endpoint
-      const response = await fetch(`/api/og/${takeId}`);
-      const blob = await response.blob();
+      const blob = await getImageBlob();
+      if (!blob) throw new Error("Failed to get image");
       
       // Create download link
       const url = URL.createObjectURL(blob);
@@ -59,17 +126,36 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
   };
 
   const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "My Receipt",
-          text: "Check out my take on Receipts 🧾",
-          url: getShareUrl(),
-        });
-      } catch (err) {
-        // User cancelled or error
-        console.log("Share cancelled or failed:", err);
+    if (!navigator.share) return;
+    
+    try {
+      // Try to share with image if supported
+      if (takeId && navigator.canShare) {
+        const blob = await getImageBlob();
+        if (blob) {
+          const file = new File([blob], `receipt-${takeId}.png`, { type: "image/png" });
+          const shareData = {
+            title: "My Receipt",
+            text: "Check out my take on Receipts 🧾",
+            url: getShareUrl(),
+            files: [file],
+          };
+          
+          if (navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            return;
+          }
+        }
       }
+      
+      // Fallback to basic share
+      await navigator.share({
+        title: "My Receipt",
+        text: "Check out my take on Receipts 🧾",
+        url: getShareUrl(),
+      });
+    } catch (err) {
+      console.log("Share cancelled or failed:", err);
     }
   };
 
@@ -87,10 +173,11 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
 
       <button
         onClick={handleShareToX}
-        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+        disabled={sharingToX}
+        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors disabled:opacity-50"
       >
         <Twitter className="w-4 h-4" />
-        Share to X
+        {sharingToX ? "Preparing..." : "Share to X"}
       </button>
 
       {takeId && (

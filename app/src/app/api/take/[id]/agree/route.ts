@@ -52,18 +52,26 @@ export async function POST(
       });
     }
 
-    // Upsert agreement (update if exists, create if not)
-    const agreement = await prisma.agreement.upsert({
+    // Check if user already has a position on this take
+    const existingAgreement = await prisma.agreement.findUnique({
       where: {
         takeId_userId: {
           takeId,
           userId: user.id,
         },
       },
-      update: {
-        position: "AGREE",
-      },
-      create: {
+    });
+
+    if (existingAgreement) {
+      return NextResponse.json(
+        { error: "Position already locked. You cannot change your stance." },
+        { status: 400 }
+      );
+    }
+
+    // Create new agreement (positions are permanent)
+    const agreement = await prisma.agreement.create({
+      data: {
         takeId,
         userId: user.id,
         position: "AGREE",
@@ -80,46 +88,4 @@ export async function POST(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId: clerkUserId } = await auth();
-  
-  if (!clerkUserId) {
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 }
-    );
-  }
-
-  const { id: takeId } = await params;
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { clerkId: clerkUserId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    await prisma.agreement.deleteMany({
-      where: {
-        takeId,
-        userId: user.id,
-      },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting agreement:", error);
-    return NextResponse.json(
-      { error: "Failed to remove agreement" },
-      { status: 500 }
-    );
-  }
-}
+// Remove DELETE endpoint - positions are now permanent

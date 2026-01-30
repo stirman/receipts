@@ -8,7 +8,7 @@ interface TakeFormProps {
   onSuccess?: (take: Take) => void;
 }
 
-type FormStep = "input" | "verifying" | "confirm" | "signing_in" | "saving";
+type FormStep = "input" | "verifying" | "confirm" | "suggesting" | "signing_in" | "saving";
 
 export function TakeForm({ onSuccess }: TakeFormProps) {
   const { isSignedIn } = useAuth();
@@ -97,6 +97,33 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
     }
   };
 
+  const handleMakeClearer = async () => {
+    setStep("suggesting");
+    setError(null);
+
+    try {
+      const response = await fetch("/api/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ take: take.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get suggestion");
+      }
+
+      const result = await response.json();
+      if (result.suggestedTake) {
+        setTake(result.suggestedTake);
+      }
+      setStep("input");
+      setVerification(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setStep("input");
+    }
+  };
+
   const handleLockIn = async () => {
     if (!verification) return;
 
@@ -176,34 +203,57 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
     );
   }
 
+  // Suggesting step
+  if (step === "suggesting") {
+    return (
+      <div className="w-full max-w-md">
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10 text-center">
+          <div className="animate-pulse">
+            <div className="text-2xl mb-3">✨</div>
+            <p className="text-white/70">Making your take clearer...</p>
+            <p className="text-white/40 text-sm mt-2">
+              Generating a more specific, verifiable version
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Confirmation step
   if (step === "confirm" && verification) {
+    const hasConflict = (verification as AIVerificationResult & { hasConflict?: boolean }).hasConflict;
+    
     return (
       <div className="w-full max-w-md">
         <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
           <div className="text-center mb-4">
             <div className="text-2xl mb-2">
-              {verification.isVerifiable ? "✅" : "⚠️"}
+              {hasConflict ? "🚫" : verification.isVerifiable ? "✅" : "⚠️"}
             </div>
             <h3 className="font-semibold text-white">
-              {verification.isVerifiable
+              {hasConflict
+                ? "Conflicting Take"
+                : verification.isVerifiable
                 ? "Take Verified!"
                 : "Needs More Clarity"}
             </h3>
           </div>
 
           {/* AI Interpretation */}
-          <div className="bg-black/30 rounded-lg p-4 mb-4">
-            <p className="text-sm text-white/60 mb-2">
-              I&apos;ll record this as:
-            </p>
-            <p className="text-white font-medium">
-              &ldquo;{verification.refinedTake || take}&rdquo;
-            </p>
-          </div>
+          {!hasConflict && (
+            <div className="bg-black/30 rounded-lg p-4 mb-4">
+              <p className="text-sm text-white/60 mb-2">
+                I&apos;ll record this as:
+              </p>
+              <p className="text-white font-medium">
+                &ldquo;{verification.refinedTake || take}&rdquo;
+              </p>
+            </div>
+          )}
 
           {/* Structured data */}
-          {verification.isVerifiable && (
+          {verification.isVerifiable && !hasConflict && (
             <div className="space-y-2 text-sm mb-4">
               {verification.subject && (
                 <div className="flex justify-between">
@@ -235,7 +285,9 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
           )}
 
           {/* Explanation */}
-          <p className="text-white/50 text-xs mb-6">{verification.explanation}</p>
+          <p className={`text-xs mb-6 ${hasConflict ? "text-red-400" : "text-white/50"}`}>
+            {verification.explanation}
+          </p>
 
           {error && <p className="text-red-400 text-xs mb-4">{error}</p>}
 
@@ -247,7 +299,14 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
             >
               Edit Take
             </button>
-            {verification.isVerifiable ? (
+            {hasConflict ? (
+              <button
+                onClick={handleBack}
+                className="flex-1 px-4 py-2.5 bg-white/20 text-white font-semibold rounded-lg hover:bg-white/30 transition-colors text-sm"
+              >
+                Try Different Take
+              </button>
+            ) : verification.isVerifiable ? (
               <button
                 onClick={handleLockIn}
                 className="flex-1 px-4 py-2.5 bg-white text-black font-semibold rounded-lg hover:bg-white/90 transition-colors text-sm"
@@ -256,7 +315,7 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
               </button>
             ) : (
               <button
-                onClick={handleBack}
+                onClick={handleMakeClearer}
                 className="flex-1 px-4 py-2.5 bg-amber-500 text-black font-semibold rounded-lg hover:bg-amber-400 transition-colors text-sm"
               >
                 Make It Clearer

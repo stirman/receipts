@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 import type { Take, TakeStatus } from "@/lib/types";
 
 interface ReceiptCardProps {
-  take: Take;
+  take: Take & { userPosition?: "AGREE" | "DISAGREE" | null };
 }
 
 function formatDate(dateStr: string): string {
@@ -79,6 +80,28 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
             <span className="text-receipt-text-muted">LOCKED</span>
             <span className="font-semibold">{formatDate(take.lockedAt)}</span>
           </div>
+
+          {/* User's position if they have one */}
+          {take.userPosition && (
+            <div className="flex justify-between items-center text-xs mb-2">
+              <span className="text-receipt-text-muted">MY POSITION</span>
+              <span className={`font-bold flex items-center gap-1 ${
+                take.userPosition === "AGREE" ? "text-green-700" : "text-red-700"
+              }`}>
+                {take.userPosition === "AGREE" ? (
+                  <>
+                    <ThumbsUp className="w-3 h-3" />
+                    AGREED
+                  </>
+                ) : (
+                  <>
+                    <ThumbsDown className="w-3 h-3" />
+                    DISAGREED
+                  </>
+                )}
+              </span>
+            </div>
+          )}
 
           {/* Status section */}
           <div className="text-center pt-5 mt-4 border-t-2 border-dashed border-receipt-divider">

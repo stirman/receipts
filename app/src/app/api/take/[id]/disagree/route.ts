@@ -52,18 +52,26 @@ export async function POST(
       });
     }
 
-    // Upsert agreement (update if exists, create if not)
-    const agreement = await prisma.agreement.upsert({
+    // Check if user already has a position on this take
+    const existingAgreement = await prisma.agreement.findUnique({
       where: {
         takeId_userId: {
           takeId,
           userId: user.id,
         },
       },
-      update: {
-        position: "DISAGREE",
-      },
-      create: {
+    });
+
+    if (existingAgreement) {
+      return NextResponse.json(
+        { error: "Position already locked. You cannot change your stance." },
+        { status: 400 }
+      );
+    }
+
+    // Create new agreement (positions are permanent)
+    const agreement = await prisma.agreement.create({
+      data: {
         takeId,
         userId: user.id,
         position: "DISAGREE",

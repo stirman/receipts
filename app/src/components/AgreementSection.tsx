@@ -3,16 +3,9 @@
 import { useState, useEffect } from "react";
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
-
-interface Agreement {
-  id: string;
-  username: string;
-  createdAt: string;
-}
+import { ConfirmModal } from "./ConfirmModal";
 
 interface AgreementData {
-  agrees: Agreement[];
-  disagrees: Agreement[];
   agreeCount: number;
   disagreeCount: number;
   userPosition: "AGREE" | "DISAGREE" | null;
@@ -32,6 +25,10 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
   const [data, setData] = useState<AgreementData | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; position: "AGREE" | "DISAGREE" | null }>({
+    isOpen: false,
+    position: null,
+  });
 
   const isResolved = status !== "PENDING";
   
@@ -59,7 +56,10 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
     }
   }
 
-  async function handleVote(position: "AGREE" | "DISAGREE") {
+  function handleVoteClick(position: "AGREE" | "DISAGREE") {
+    // If user already has a position, don't allow changing
+    if (data?.userPosition) return;
+    
     if (!isSignedIn) {
       // Store intended action and redirect to sign in
       sessionStorage.setItem("pendingVote", JSON.stringify({ takeId, position }));
@@ -67,9 +67,16 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
       return;
     }
 
+    // Show confirmation modal
+    setConfirmModal({ isOpen: true, position });
+  }
+
+  async function handleConfirmedVote() {
+    if (!confirmModal.position) return;
+    
     setSubmitting(true);
     try {
-      const endpoint = position === "AGREE" ? "agree" : "disagree";
+      const endpoint = confirmModal.position === "AGREE" ? "agree" : "disagree";
       const res = await fetch(`/api/take/${takeId}/${endpoint}`, {
         method: "POST",
       });
@@ -87,41 +94,24 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
     }
   }
 
-  async function handleRemoveVote() {
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/take/${takeId}/agree`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        await fetchAgreements();
-      }
-    } catch (error) {
-      console.error("Failed to remove vote:", error);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   // Check for pending vote after sign in
   useEffect(() => {
-    if (isSignedIn) {
+    if (isSignedIn && !data?.userPosition) {
       const pendingVote = sessionStorage.getItem("pendingVote");
       if (pendingVote) {
         const { takeId: pendingTakeId, position } = JSON.parse(pendingVote);
         if (pendingTakeId === takeId) {
           sessionStorage.removeItem("pendingVote");
-          handleVote(position);
+          setConfirmModal({ isOpen: true, position });
         }
       }
     }
-  }, [isSignedIn, takeId]);
+  }, [isSignedIn, takeId, data?.userPosition]);
 
   if (loading) {
     return (
       <div className="mt-8 text-center text-white/50">
-        Loading agreements...
+        Loading...
       </div>
     );
   }
@@ -132,6 +122,17 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
 
   return (
     <div className="mt-8 w-full max-w-md mx-auto">
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, position: null })}
+        onConfirm={handleConfirmedVote}
+        title={confirmModal.position === "AGREE" ? "Lock in your agreement?" : "Lock in your disagreement?"}
+        message="Once you take a position, it's locked in permanently. You won't be able to change it later."
+        confirmText={confirmModal.position === "AGREE" ? "I Agree" : "I Disagree"}
+        confirmColor={confirmModal.position === "AGREE" ? "green" : "red"}
+      />
+
       {/* Vote Buttons / Static Counts */}
       {!isResolved && (
         <div className="flex gap-4 justify-center mb-6">
@@ -147,30 +148,42 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
                 <span>{disagreeCount}</span>
               </div>
             </>
+          ) : userPosition ? (
+            // Already voted: show locked position with counts
+            <>
+              <div className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                userPosition === "AGREE" 
+                  ? "bg-green-600 text-white ring-2 ring-green-400" 
+                  : "bg-white/10 text-white/50"
+              }`}>
+                <ThumbsUp className="w-5 h-5" />
+                <span>Agree ({agreeCount})</span>
+              </div>
+              <div className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                userPosition === "DISAGREE" 
+                  ? "bg-red-600 text-white ring-2 ring-red-400" 
+                  : "bg-white/10 text-white/50"
+              }`}>
+                <ThumbsDown className="w-5 h-5" />
+                <span>Disagree ({disagreeCount})</span>
+              </div>
+            </>
           ) : (
-            // Others' takes: interactive buttons with green/red colors
+            // Not voted yet: interactive buttons
             <>
               <button
-                onClick={() => userPosition === "AGREE" ? handleRemoveVote() : handleVote("AGREE")}
+                onClick={() => handleVoteClick("AGREE")}
                 disabled={submitting}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-                  userPosition === "AGREE"
-                    ? "bg-green-600 text-white ring-2 ring-green-400"
-                    : "bg-green-600 text-white hover:bg-green-500"
-                } ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all bg-green-600 text-white hover:bg-green-500 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <ThumbsUp className="w-5 h-5" />
                 <span>Agree ({agreeCount})</span>
               </button>
               
               <button
-                onClick={() => userPosition === "DISAGREE" ? handleRemoveVote() : handleVote("DISAGREE")}
+                onClick={() => handleVoteClick("DISAGREE")}
                 disabled={submitting}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-                  userPosition === "DISAGREE"
-                    ? "bg-red-600 text-white ring-2 ring-red-400"
-                    : "bg-red-600 text-white hover:bg-red-500"
-                } ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all bg-red-600 text-white hover:bg-red-500 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <ThumbsDown className="w-5 h-5" />
                 <span>Disagree ({disagreeCount})</span>
@@ -182,49 +195,8 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
 
       {/* Resolution message */}
       {isResolved && (agreeCount > 0 || disagreeCount > 0) && (
-        <div className="text-center text-white/50 text-sm mb-4">
+        <div className="text-center text-white/50 text-sm">
           Final count: {agreeCount} agreed, {disagreeCount} disagreed
-        </div>
-      )}
-
-      {/* Agreement Lists */}
-      {(agreeCount > 0 || disagreeCount > 0) && (
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          {/* Agree Column */}
-          <div className="bg-white/5 rounded-lg p-4">
-            <h3 className="text-green-400 font-semibold text-sm mb-3 flex items-center gap-2">
-              <ThumbsUp className="w-4 h-4" />
-              Agree ({agreeCount})
-            </h3>
-            <ul className="space-y-2">
-              {data?.agrees.map((agreement) => (
-                <li key={agreement.id} className="text-white/70 text-sm">
-                  @{agreement.username}
-                </li>
-              ))}
-              {agreeCount === 0 && (
-                <li className="text-white/30 text-sm italic">No one yet</li>
-              )}
-            </ul>
-          </div>
-
-          {/* Disagree Column */}
-          <div className="bg-white/5 rounded-lg p-4">
-            <h3 className="text-red-400 font-semibold text-sm mb-3 flex items-center gap-2">
-              <ThumbsDown className="w-4 h-4" />
-              Disagree ({disagreeCount})
-            </h3>
-            <ul className="space-y-2">
-              {data?.disagrees.map((agreement) => (
-                <li key={agreement.id} className="text-white/70 text-sm">
-                  @{agreement.username}
-                </li>
-              ))}
-              {disagreeCount === 0 && (
-                <li className="text-white/30 text-sm italic">No one yet</li>
-              )}
-            </ul>
-          </div>
         </div>
       )}
     </div>
