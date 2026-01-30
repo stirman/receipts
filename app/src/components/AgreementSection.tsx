@@ -136,15 +136,15 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
       {!isResolved && (
         <div className="flex gap-4 justify-center mb-6">
           {isOwnTake ? (
-            // Own take: show static counts, not interactive buttons
+            // Own take: show plain text counts, no button styling
             <>
-              <div className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-green-600/20 text-green-400 border border-green-600/30">
+              <div className="flex items-center gap-2 text-green-400">
                 <ThumbsUp className="w-5 h-5" />
-                <span>Agree ({agreeCount})</span>
+                <span>{agreeCount}</span>
               </div>
-              <div className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-red-600/20 text-red-400 border border-red-600/30">
+              <div className="flex items-center gap-2 text-red-400">
                 <ThumbsDown className="w-5 h-5" />
-                <span>Disagree ({disagreeCount})</span>
+                <span>{disagreeCount}</span>
               </div>
             </>
           ) : (
