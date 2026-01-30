@@ -36,6 +36,9 @@ model Take {
   // Clerk user relation
   clerkUserId String?
   user        User?     @relation(fields: [clerkUserId], references: [clerkId])
+  
+  // Agreements
+  agreements  Agreement[]
 
   @@index([status])
   @@index([createdAt])
@@ -56,7 +59,29 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  takes     Take[]
+  takes       Take[]
+  agreements  Agreement[]
+}
+
+// User agreement on a take (agree/disagree)
+model Agreement {
+  id        String   @id @default(cuid())
+  takeId    String
+  userId    String
+  position  Position
+  createdAt DateTime @default(now())
+
+  take      Take     @relation(fields: [takeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([takeId, userId]) // One position per user per take
+  @@index([takeId])
+  @@index([userId])
+}
+
+enum Position {
+  AGREE
+  DISAGREE
 }
 
 enum TakeStatus {

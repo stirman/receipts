@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { Flame } from "lucide-react";
 
 // Dynamically import Clerk components only when configured
 const ClerkAuth = dynamic(
@@ -21,6 +22,13 @@ export function Header() {
           <p className="text-white/50 text-sm hidden sm:block">
             Hot takes with proof
           </p>
+          <Link
+            href="/#create"
+            className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-lg hover:shadow-orange-500/25"
+          >
+            <Flame className="w-4 h-4" />
+            <span className="hidden sm:inline">Hot Take</span>
+          </Link>
           <ClerkAuth />
         </div>
       </div>

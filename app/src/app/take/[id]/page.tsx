@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ShareButtons } from "@/components/ShareButtons";
 import { Header } from "@/components/Header";
+import { AgreementSection } from "@/components/AgreementSection";
 
 interface TakePageProps {
   params: Promise<{ id: string }>;
@@ -55,17 +56,24 @@ function formatDate(date: Date): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  // Map internal status to display labels
+  const labels: Record<string, string> = {
+    PENDING: "PENDING",
+    VERIFIED: "TRUE",
+    WRONG: "FALSE",
+  };
+
   const styles: Record<string, string> = {
     PENDING: "bg-status-pending-bg text-status-pending-text",
-    VERIFIED: "bg-status-verified-bg text-status-verified-text",
-    WRONG: "bg-status-wrong-bg text-status-wrong-text",
+    VERIFIED: "bg-green-600 text-white",
+    WRONG: "bg-red-600 text-white",
   };
 
   return (
     <span
       className={`inline-block px-5 py-2 text-sm font-bold rounded tracking-widest ${styles[status]}`}
     >
-      {status}
+      {labels[status]}
     </span>
   );
 }
@@ -153,10 +161,13 @@ export default async function TakePage({ params }: TakePageProps) {
           </div>
         </div>
 
+        {/* Agreement Section */}
+        <AgreementSection takeId={take.id} status={take.status} />
+
         {/* Share section */}
         <div className="mt-8 text-center">
           <p className="text-white/50 text-sm mb-4">Share this receipt</p>
-          <ShareButtons />
+          <ShareButtons takeId={take.id} />
         </div>
       </main>
 

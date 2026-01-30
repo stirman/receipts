@@ -45,11 +45,22 @@ function truncateHash(hash: string | null): string {
 function getStatusColors(status: string) {
   switch (status) {
     case "VERIFIED":
-      return COLORS.verified;
+      return { bg: "#16a34a", text: "#ffffff" }; // Green for TRUE
     case "WRONG":
-      return COLORS.wrong;
+      return { bg: "#dc2626", text: "#ffffff" }; // Red for FALSE
     default:
       return COLORS.pending;
+  }
+}
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "VERIFIED":
+      return "TRUE";
+    case "WRONG":
+      return "FALSE";
+    default:
+      return "PENDING";
   }
 }
 
@@ -249,7 +260,7 @@ export async function GET(
                   letterSpacing: "3px",
                 }}
               >
-                {take.status}
+                {getStatusLabel(take.status)}
               </div>
 
               {/* Resolution date */}

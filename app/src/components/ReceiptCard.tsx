@@ -21,14 +21,14 @@ function truncateHash(hash: string | null): string {
 function StatusBadge({ status }: { status: TakeStatus }) {
   const styles = {
     PENDING: "bg-status-pending-bg text-status-pending-text",
-    VERIFIED: "bg-status-verified-bg text-status-verified-text",
-    WRONG: "bg-status-wrong-bg text-status-wrong-text",
+    VERIFIED: "bg-green-600 text-white",
+    WRONG: "bg-red-600 text-white",
   };
 
   const labels = {
     PENDING: "PENDING",
-    VERIFIED: "VERIFIED",
-    WRONG: "WRONG",
+    VERIFIED: "TRUE",
+    WRONG: "FALSE",
   };
 
   return (
