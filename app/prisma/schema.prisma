@@ -52,6 +52,12 @@ model User {
   email     String?  @unique
   imageUrl  String?  // Profile image from Clerk
 
+  // Twitter OAuth tokens
+  twitterId           String?  @unique
+  twitterUsername     String?
+  twitterAccessToken  String?
+  twitterAccessSecret String?
+
   // Record tracking
   wins      Int      @default(0)
   losses    Int      @default(0)

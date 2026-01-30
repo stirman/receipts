@@ -1,15 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import { Link2, Twitter, Download } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { Link2, Twitter, Download, ExternalLink } from "lucide-react";
 
 interface ShareButtonsProps {
   takeId?: string;
 }
 
 export function ShareButtons({ takeId }: ShareButtonsProps) {
+  const { isSignedIn } = useAuth();
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [sharingToX, setSharingToX] = useState(false);
+  const [twitterConnected, setTwitterConnected] = useState(false);
+  const [twitterUsername, setTwitterUsername] = useState<string | null>(null);
+  const [tweetUrl, setTweetUrl] = useState<string | null>(null);
+
+  // Check Twitter connection status
+  useEffect(() => {
+    if (isSignedIn) {
+      fetch("/api/share/twitter")
+        .then(res => res.json())
+        .then(data => {
+          setTwitterConnected(data.connected);
+          setTwitterUsername(data.username);
+        })
+        .catch(() => {});
+    }
+  }, [isSignedIn]);
 
   const getShareUrl = () => {
     if (typeof window === "undefined") return "";
@@ -49,11 +68,71 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
     }
   };
 
-  const handleShareToX = () => {
-    const url = getShareUrl();
-    const text = "Check out this take 🧾";
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-    window.open(twitterUrl, "_blank", "width=550,height=420");
+  const handleShareToX = async () => {
+    if (!takeId) {
+      // Fallback to basic share
+      const url = getShareUrl();
+      const text = "Check out this take 🧾";
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      window.open(twitterUrl, "_blank", "width=550,height=420");
+      return;
+    }
+
+    // If not signed in, use basic share
+    if (!isSignedIn) {
+      const url = getShareUrl();
+      const text = "Check out this take 🧾";
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      window.open(twitterUrl, "_blank", "width=550,height=420");
+      return;
+    }
+
+    // If Twitter not connected, start OAuth
+    if (!twitterConnected) {
+      window.location.href = `/api/auth/twitter?takeId=${takeId}`;
+      return;
+    }
+
+    // Share with image via API
+    setSharingToX(true);
+    try {
+      const response = await fetch("/api/share/twitter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          takeId,
+          text: `Check out this take 🧾\n\n${getShareUrl()}`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.needsAuth) {
+        window.location.href = `/api/auth/twitter?takeId=${takeId}`;
+        return;
+      }
+
+      if (data.success && data.tweetUrl) {
+        setTweetUrl(data.tweetUrl);
+        // Open the tweet in a new tab
+        window.open(data.tweetUrl, "_blank");
+      } else {
+        // Fallback to basic share
+        const url = getShareUrl();
+        const text = "Check out this take 🧾";
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        window.open(twitterUrl, "_blank", "width=550,height=420");
+      }
+    } catch (err) {
+      console.error("Failed to share:", err);
+      // Fallback
+      const url = getShareUrl();
+      const text = "Check out this take 🧾";
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      window.open(twitterUrl, "_blank", "width=550,height=420");
+    } finally {
+      setSharingToX(false);
+    }
   };
 
   const handleShareToReddit = () => {
@@ -86,11 +165,24 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
 
       <button
         onClick={handleShareToX}
-        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+        disabled={sharingToX}
+        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors disabled:opacity-50"
       >
         <Twitter className="w-4 h-4" />
-        Share to X
+        {sharingToX ? "Posting..." : twitterConnected ? "Post to X" : "Share to X"}
       </button>
+
+      {tweetUrl && (
+        <a
+          href={tweetUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-green-600/20 text-green-400 hover:bg-green-600/30 rounded-lg text-sm transition-colors"
+        >
+          <ExternalLink className="w-4 h-4" />
+          View Tweet
+        </a>
+      )}
 
       <button
         onClick={handleShareToReddit}
