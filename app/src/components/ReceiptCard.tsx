@@ -87,6 +87,23 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
             <span className="font-semibold">{formatDate(take.lockedAt)}</span>
           </div>
 
+          {/* Community engagement */}
+          {hasEngagement && (
+            <div className="flex justify-between items-center text-xs mb-2">
+              <span className="text-receipt-text-muted">COMMUNITY</span>
+              <span className="flex items-center gap-3 font-semibold">
+                <span className="flex items-center gap-1 text-green-700">
+                  <ThumbsUp className="w-3 h-3" />
+                  {take.agreeCount || 0}
+                </span>
+                <span className="flex items-center gap-1 text-red-700">
+                  <ThumbsDown className="w-3 h-3" />
+                  {take.disagreeCount || 0}
+                </span>
+              </span>
+            </div>
+          )}
+
           {/* User's position if they have one */}
           {take.userPosition && (
             <div className="flex justify-between items-center text-xs mb-2">
@@ -105,23 +122,6 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
                     DISAGREED
                   </>
                 )}
-              </span>
-            </div>
-          )}
-
-          {/* Community engagement */}
-          {hasEngagement && (
-            <div className="flex justify-between items-center text-xs mb-2">
-              <span className="text-receipt-text-muted">COMMUNITY</span>
-              <span className="flex items-center gap-3 font-semibold">
-                <span className="flex items-center gap-1 text-green-700">
-                  <ThumbsUp className="w-3 h-3" />
-                  {take.agreeCount || 0}
-                </span>
-                <span className="flex items-center gap-1 text-red-700">
-                  <ThumbsDown className="w-3 h-3" />
-                  {take.disagreeCount || 0}
-                </span>
               </span>
             </div>
           )}

@@ -7,6 +7,7 @@ import {
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
+import { FileText } from "lucide-react";
 
 export function ClerkAuth() {
   // Check if Clerk is configured
@@ -35,7 +36,15 @@ export function ClerkAuth() {
               avatarBox: "w-9 h-9"
             }
           }}
-        />
+        >
+          <UserButton.MenuItems>
+            <UserButton.Link
+              label="My Takes"
+              labelIcon={<FileText className="w-4 h-4" />}
+              href="/my-takes"
+            />
+          </UserButton.MenuItems>
+        </UserButton>
       </SignedIn>
     </>
   );

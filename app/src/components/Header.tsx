@@ -19,9 +19,6 @@ export function Header() {
           <span className="font-bold text-xl tracking-tight">Receipts</span>
         </Link>
         <div className="flex items-center gap-4">
-          <p className="text-white/50 text-sm hidden sm:block">
-            Hot takes with proof
-          </p>
           <Link
             href="/#create"
             className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-lg hover:shadow-orange-500/25"

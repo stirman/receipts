@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { ReceiptCard } from "@/components/ReceiptCard";
 import { Header } from "@/components/Header";
@@ -21,19 +22,37 @@ const TakeForm = dynamic(
   }
 );
 
-type TakeWithPosition = Take & { userPosition?: "AGREE" | "DISAGREE" | null };
+type TakeWithPosition = Take & { 
+  userPosition?: "AGREE" | "DISAGREE" | null;
+  agreeCount?: number;
+  disagreeCount?: number;
+};
+
+type TabType = "trending" | "recent" | "mine";
 
 export default function Home() {
+  const { isSignedIn } = useAuth();
   const [takes, setTakes] = useState<TakeWithPosition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabType>("trending");
+  const [myTakesStats, setMyTakesStats] = useState<{ accuracy: number | null } | null>(null);
 
-  const fetchTakes = async () => {
+  const fetchTakes = async (tab: TabType) => {
+    setIsLoading(true);
     try {
-      // Use trending endpoint to get takes sorted by engagement
-      const response = await fetch("/api/takes/trending");
+      let endpoint = "/api/takes/trending";
+      if (tab === "recent") endpoint = "/api/takes/recent";
+      if (tab === "mine") endpoint = "/api/takes/mine";
+
+      const response = await fetch(endpoint);
       if (response.ok) {
         const data = await response.json();
-        setTakes(data);
+        if (tab === "mine") {
+          setTakes(data.takes || []);
+          setMyTakesStats(data.stats);
+        } else {
+          setTakes(data);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch takes:", error);
@@ -43,11 +62,16 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchTakes();
-  }, []);
+    fetchTakes(activeTab);
+  }, [activeTab]);
 
   const handleNewTake = (newTake: Take) => {
-    setTakes([{ ...newTake, userPosition: null }, ...takes]);
+    setTakes([{ ...newTake, userPosition: null, agreeCount: 0, disagreeCount: 0 }, ...takes]);
+  };
+
+  const handleTabChange = (tab: TabType) => {
+    if (tab === "mine" && !isSignedIn) return;
+    setActiveTab(tab);
   };
 
   return (
@@ -72,18 +96,59 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trending Takes */}
+      {/* Takes Section */}
       <section className="max-w-6xl mx-auto px-4 pb-20">
-        <h2 className="text-xl font-semibold mb-8 text-white/80">
-          🔥 Trending Takes
-        </h2>
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-6 mb-8">
+          <button
+            onClick={() => handleTabChange("trending")}
+            className={`text-lg font-semibold transition-colors ${
+              activeTab === "trending" 
+                ? "text-white" 
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            🔥 Trending
+          </button>
+          <button
+            onClick={() => handleTabChange("recent")}
+            className={`text-lg font-semibold transition-colors ${
+              activeTab === "recent" 
+                ? "text-white" 
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            Recent
+          </button>
+          {isSignedIn && (
+            <button
+              onClick={() => handleTabChange("mine")}
+              className={`text-lg font-semibold transition-colors ${
+                activeTab === "mine" 
+                  ? "text-white" 
+                  : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              My Takes
+              {myTakesStats && myTakesStats.accuracy !== null && activeTab === "mine" && (
+                <span className="ml-2 text-sm font-normal text-white/50">
+                  ({myTakesStats.accuracy}% accuracy)
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Takes Grid */}
         {isLoading ? (
           <div className="text-center text-white/50 py-12">
             Loading takes...
           </div>
         ) : takes.length === 0 ? (
           <div className="text-center text-white/50 py-12">
-            No takes yet. Be the first to lock one in!
+            {activeTab === "mine" 
+              ? "You haven't made any takes yet. Lock one in above!"
+              : "No takes yet. Be the first to lock one in!"}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
