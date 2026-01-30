@@ -162,6 +162,15 @@ export async function GET(
               >
                 HOT TAKES • LOCKED IN
               </div>
+              <div
+                style={{
+                  fontSize: 9,
+                  color: COLORS.textFaded,
+                  marginTop: 6,
+                }}
+              >
+                {truncateHash(take.hash)}
+              </div>
             </div>
 
             {/* Take text */}
@@ -243,8 +252,8 @@ export async function GET(
                 {take.status}
               </div>
 
-              {/* Resolve date for pending */}
-              {take.status === "PENDING" && take.resolvesAt && (
+              {/* Resolution date */}
+              {take.resolvesAt && (
                 <div
                   style={{
                     fontSize: 10,
@@ -253,7 +262,7 @@ export async function GET(
                     display: "flex",
                   }}
                 >
-                  Resolves{" "}
+                  {take.status === "PENDING" ? "Resolves" : "Resolved"}{" "}
                   <span
                     style={{
                       fontWeight: 600,
@@ -265,17 +274,6 @@ export async function GET(
                   </span>
                 </div>
               )}
-
-              {/* Hash */}
-              <div
-                style={{
-                  fontSize: 9,
-                  color: COLORS.textFaded,
-                  marginTop: 10,
-                }}
-              >
-                {truncateHash(take.hash)}
-              </div>
             </div>
           </div>
 

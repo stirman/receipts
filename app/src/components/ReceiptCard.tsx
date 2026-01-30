@@ -57,6 +57,9 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
             <div className="text-[0.55rem] text-receipt-text-faded tracking-wider">
               HOT TAKES • LOCKED IN
             </div>
+            <div className="text-[0.6rem] text-receipt-text-faded mt-1.5 font-mono">
+              {truncateHash(take.hash)}
+            </div>
           </div>
 
           {/* Take text */}
@@ -80,17 +83,14 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
           {/* Status section */}
           <div className="text-center pt-5 mt-4 border-t-2 border-dashed border-receipt-divider">
             <StatusBadge status={take.status} />
-            {take.status === "PENDING" && take.resolvesAt && (
+            {take.resolvesAt && (
               <div className="text-[0.7rem] text-receipt-text-light mt-2.5">
-                Resolves{" "}
+                {take.status === "PENDING" ? "Resolves" : "Resolved"}{" "}
                 <span className="font-semibold text-receipt-text">
                   {formatDate(take.resolvesAt)}
                 </span>
               </div>
             )}
-            <div className="text-[0.6rem] text-receipt-text-faded mt-2 font-mono">
-              {truncateHash(take.hash)}
-            </div>
           </div>
         </div>
 

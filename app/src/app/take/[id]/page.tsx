@@ -107,6 +107,11 @@ export default async function TakePage({ params }: TakePageProps) {
                 <div className="text-[0.55rem] text-receipt-text-faded tracking-wider">
                   HOT TAKES • LOCKED IN
                 </div>
+                {take.hash && (
+                  <div className="text-[0.6rem] text-receipt-text-faded mt-1.5 font-mono">
+                    #{take.hash.slice(0, 8)}...{take.hash.slice(-4)}
+                  </div>
+                )}
               </div>
 
               {/* Take text */}
@@ -127,20 +132,17 @@ export default async function TakePage({ params }: TakePageProps) {
                   <span className="text-receipt-text-muted">LOCKED</span>
                   <span className="font-semibold">{formatDate(take.lockedAt)}</span>
                 </div>
-                {take.resolvesAt && (
-                  <div className="flex justify-between">
-                    <span className="text-receipt-text-muted">RESOLVES</span>
-                    <span className="font-semibold">{formatDate(take.resolvesAt)}</span>
-                  </div>
-                )}
               </div>
 
               {/* Status section */}
               <div className="text-center pt-5 mt-4 border-t-2 border-dashed border-receipt-divider">
                 <StatusBadge status={take.status} />
-                {take.hash && (
-                  <div className="text-[0.6rem] text-receipt-text-faded mt-2 font-mono break-all">
-                    #{take.hash}
+                {take.resolvesAt && (
+                  <div className="text-[0.7rem] text-receipt-text-light mt-2.5">
+                    {take.status === "PENDING" ? "Resolves" : "Resolved"}{" "}
+                    <span className="font-semibold text-receipt-text">
+                      {formatDate(take.resolvesAt)}
+                    </span>
                   </div>
                 )}
               </div>
