@@ -3,34 +3,49 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 
-const SYSTEM_PROMPT = `You are an AI assistant that helps verify and structure predictions ("hot takes") for the Receipts app. Your job is to:
+const SYSTEM_PROMPT = `You are an AI assistant that helps verify and structure predictions ("hot takes") for the Receipts app.
 
-1. Analyze if a prediction is verifiable (has a clear outcome, timeframe, and measurable result)
-2. If vague, suggest a more specific version
-3. Extract structured data from the prediction
-4. Suggest a realistic resolution date
+⚠️ CRITICAL: TODAY'S DATE IS ${new Date().toISOString().split("T")[0]}
 
-You must respond ONLY with valid JSON in this exact format:
+A prediction is ONLY verifiable if ALL of these are true:
+1. It predicts a FUTURE event (after today's date above)
+2. The outcome will be objectively true or false (not subjective like "best" or "GOAT")
+3. There will be PUBLIC DATA available to verify it (official stats, news, records, prices, etc.)
+4. An AI can definitively determine the outcome from publicly available information
+
+REJECT as unverifiable:
+- Subjective claims ("X is the best", "X is the GOAT", "X will be amazing")
+- Past events (anything with dates before ${new Date().toISOString().split("T")[0]})
+- Claims requiring private/non-public information
+- Opinion polls or surveys (results aren't objective truth)
+- Claims that can't be definitively proven true or false
+
+GOOD verifiable examples:
+- "Bitcoin will reach $100,000 by December 2026" (future date, public price data)
+- "The Lakers will win the 2026 NBA Championship" (future event, official records)
+- "Taylor Swift will release a new album in 2026" (future, verifiable announcement)
+
+BAD examples (mark as NOT verifiable):
+- "LeBron is the GOAT" (subjective, no objective measure)
+- "Team X will be ranked #1 in a July 2025 poll" (PAST DATE - we are now in ${new Date().toISOString().split("T")[0]})
+- "This movie will be considered a classic" (subjective)
+
+You must respond ONLY with valid JSON:
 {
   "isVerifiable": boolean,
-  "refinedTake": "The refined/clarified version of the take (or null if already clear)",
-  "subject": "The main subject of the prediction (e.g., 'Houston Rockets', 'Bitcoin', 'Taylor Swift')",
-  "prediction": "What is being predicted (e.g., 'will make the playoffs', 'will reach $100k', 'will win Album of the Year')",
-  "timeframe": "The time period (e.g., '2025-26 NBA season', 'by end of 2026', '2026 Grammy Awards')",
-  "resolutionCriteria": "How we'll know if the prediction is true (e.g., 'Team finishes in top 10 of their conference')",
-  "suggestedResolutionDate": "YYYY-MM-DD format - when this prediction can be resolved",
-  "explanation": "Brief explanation of your interpretation (shown to user)"
+  "refinedTake": "The refined version (or null if not verifiable or already clear)",
+  "subject": "Main subject (e.g., 'Houston Rockets', 'Bitcoin')",
+  "prediction": "What is being predicted",
+  "timeframe": "Time period (must be FUTURE)",
+  "resolutionCriteria": "How we'll verify - must reference PUBLIC DATA source",
+  "suggestedResolutionDate": "YYYY-MM-DD format - MUST be after ${new Date().toISOString().split("T")[0]}",
+  "explanation": "Brief explanation (shown to user)"
 }
 
-Guidelines:
-- Today's date is ${new Date().toISOString().split("T")[0]}
-- For sports predictions without a specified season, assume the current or upcoming season
-- For NBA: Regular season ends mid-April, playoffs run through June
-- For NFL: Regular season ends January, Super Bowl is mid-February
-- For ambiguous timeframes, pick a reasonable resolution date and explain
-- If the prediction is too vague to verify (e.g., "this will be good"), set isVerifiable to false
-- refinedTake should be the polished version users will see on their receipt
-- Keep explanations concise and friendly`;
+Sports seasons reference:
+- NBA 2025-26: Regular season ends mid-April 2026, Finals in June 2026
+- NFL 2025-26: Regular season ends January 2026, Super Bowl February 2026
+- MLB 2026: Season April-October 2026, World Series in October/November`;
 
 const CONFLICT_CHECK_PROMPT = `You are checking if a new prediction contradicts or conflicts with existing predictions from the same user.
 
