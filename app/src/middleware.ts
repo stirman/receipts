@@ -1,30 +1,8 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-// Public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/take/(.*)",
-  "/api/takes(.*)",
-  "/api/og/(.*)",
-  "/api/verify",
-]);
-
-// Check if Clerk is configured
-const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-// Export middleware
-export default clerkKey
-  ? clerkMiddleware(async (auth, request) => {
-      // Allow public routes without auth
-      if (isPublicRoute(request)) {
-        return NextResponse.next();
-      }
-    })
-  : function middleware(_request: NextRequest) {
-      return NextResponse.next();
-    };
+// Use Clerk middleware - all routes are public by default
+// Auth is only required when explicitly checked in API routes
+export default clerkMiddleware();
 
 export const config = {
   matcher: [
