@@ -6,11 +6,24 @@ import { Link2, Twitter, Download } from "lucide-react";
 interface ShareButtonsProps {
   takeId?: string;
   userPosition?: "AGREE" | "DISAGREE" | null;
+  takeStatus?: "PENDING" | "VERIFIED" | "WRONG";
 }
 
-export function ShareButtons({ takeId, userPosition }: ShareButtonsProps) {
+export function ShareButtons({ takeId, userPosition, takeStatus }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  // Check if user "called it" (was right)
+  const userCalledIt = userPosition && takeStatus && takeStatus !== "PENDING" && (
+    (userPosition === "AGREE" && takeStatus === "VERIFIED") ||
+    (userPosition === "DISAGREE" && takeStatus === "WRONG")
+  );
+
+  // Check if user was wrong
+  const userWasWrong = userPosition && takeStatus && takeStatus !== "PENDING" && (
+    (userPosition === "AGREE" && takeStatus === "WRONG") ||
+    (userPosition === "DISAGREE" && takeStatus === "VERIFIED")
+  );
 
   const getShareUrl = () => {
     if (typeof window === "undefined") return "";
@@ -69,6 +82,20 @@ export function ShareButtons({ takeId, userPosition }: ShareButtonsProps) {
     window.open(twitterUrl, "_blank", "width=550,height=420");
   };
 
+  const handleCalledIt = () => {
+    const url = getShareUrl();
+    const text = "I CALLED IT 🧾👑\n\nReceipts don't lie.";
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, "_blank", "width=550,height=420");
+  };
+
+  const handleClownMe = () => {
+    const url = getShareUrl();
+    const text = "🤡 I was wrong on this one...\n\nHumble pie tastes rough.";
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, "_blank", "width=550,height=420");
+  };
+
   const handleShareToReddit = () => {
     const url = getShareUrl();
     const title = "Check out this take on Receipts";
@@ -78,6 +105,26 @@ export function ShareButtons({ takeId, userPosition }: ShareButtonsProps) {
 
   return (
     <div className="flex flex-wrap justify-center gap-3">
+      {/* "I Called It" button - only shows when user was RIGHT */}
+      {userCalledIt && (
+        <button
+          onClick={handleCalledIt}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold transition-colors animate-pulse"
+        >
+          👑 I Called It!
+        </button>
+      )}
+
+      {/* "Clown Me" button - only shows when user was WRONG */}
+      {userWasWrong && (
+        <button
+          onClick={handleClownMe}
+          className="flex items-center gap-2 px-4 py-2 bg-red-600/50 hover:bg-red-600/70 text-white rounded-lg text-sm transition-colors"
+        >
+          🤡 Own the L
+        </button>
+      )}
+
       <button
         onClick={handleCopyLink}
         className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
