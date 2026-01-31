@@ -52,6 +52,29 @@ function formatDateWithTime(dateStr: string): string {
   return dateFormatted;
 }
 
+// Check if a date has a specific time (not midnight)
+function hasSpecificTime(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  return date.getHours() !== 0 || date.getMinutes() !== 0;
+}
+
+// Always show time for locked date (people want to see if someone locked right before resolution)
+function formatLockedDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const dateFormatted = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeFormatted = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateFormatted} @ ${timeFormatted}`;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
     PENDING: "PENDING",
@@ -167,7 +190,11 @@ export function TakeDetail({ take }: TakeDetailProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-receipt-text-muted">LOCKED</span>
-                <span className="font-semibold">{formatDate(take.lockedAt)}</span>
+                <span className="font-semibold">
+                  {hasSpecificTime(take.resolvesAt) 
+                    ? formatLockedDate(take.lockedAt) 
+                    : formatDate(take.lockedAt)}
+                </span>
               </div>
             </div>
 

@@ -62,10 +62,12 @@ export function ShareButtons({ takeId, userPosition, takeStatus, authorUsername 
     
     setDownloading(true);
     try {
-      // Include position in the OG image if user has one
-      const ogUrl = userPosition 
-        ? `/api/og/${takeId}?position=${userPosition}`
-        : `/api/og/${takeId}`;
+      // Include position and request 2x resolution for crisp downloads
+      const params = new URLSearchParams();
+      params.set("scale", "2"); // 2x resolution for downloads
+      if (userPosition) params.set("position", userPosition);
+      
+      const ogUrl = `/api/og/${takeId}?${params.toString()}`;
       const response = await fetch(ogUrl);
       const blob = await response.blob();
       

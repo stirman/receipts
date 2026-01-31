@@ -35,7 +35,7 @@ export default function Home() {
   const [takes, setTakes] = useState<TakeWithPosition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("trending");
-  const [myTakesStats, setMyTakesStats] = useState<{ accuracy: number | null } | null>(null);
+  const [myTakesStats, setMyTakesStats] = useState<{ accuracy: number | null; pending: number } | null>(null);
 
   const fetchTakes = async (tab: TabType) => {
     setIsLoading(true);
@@ -137,9 +137,9 @@ export default function Home() {
               }`}
             >
               My Takes
-              {myTakesStats && myTakesStats.accuracy !== null && activeTab === "mine" && (
+              {myTakesStats && activeTab === "mine" && (
                 <span className="ml-2 text-sm font-normal text-white/50">
-                  ({myTakesStats.accuracy}% accuracy)
+                  ({myTakesStats.accuracy !== null ? `${myTakesStats.accuracy}%` : "—"}{myTakesStats.pending > 0 ? `, ${myTakesStats.pending} pending` : ""})
                 </span>
               )}
             </button>

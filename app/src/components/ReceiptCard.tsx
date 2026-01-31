@@ -41,6 +41,29 @@ function formatDateWithTime(dateStr: string): string {
   return dateFormatted;
 }
 
+// Check if a date has a specific time (not midnight)
+function hasSpecificTime(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  return date.getHours() !== 0 || date.getMinutes() !== 0;
+}
+
+// Always show time for locked date when resolution has specific time
+function formatLockedDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const dateFormatted = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeFormatted = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateFormatted} @ ${timeFormatted}`;
+}
+
 function truncateHash(hash: string | null): string {
   if (!hash) return "#--------...----";
   return `#${hash.slice(0, 8)}...${hash.slice(-4)}`;
@@ -107,7 +130,11 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
           </div>
           <div className="flex justify-between text-xs mb-2">
             <span className="text-receipt-text-muted">LOCKED</span>
-            <span className="font-semibold">{formatDate(take.lockedAt)}</span>
+            <span className="font-semibold">
+              {hasSpecificTime(take.resolvesAt) 
+                ? formatLockedDate(take.lockedAt) 
+                : formatDate(take.lockedAt)}
+            </span>
           </div>
 
           {/* Community engagement */}

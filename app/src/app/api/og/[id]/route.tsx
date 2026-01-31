@@ -3,9 +3,9 @@ import { prisma } from "@/lib/db";
 
 // Use Node.js runtime (50MB limit) instead of Edge (1MB limit)
 
-// OG Image dimensions
-const WIDTH = 1200;
-const HEIGHT = 630;
+// OG Image dimensions (base)
+const BASE_WIDTH = 1200;
+const BASE_HEIGHT = 630;
 
 // Colors matching our design system
 const COLORS = {
@@ -70,9 +70,14 @@ export async function GET(
 ) {
   const { id } = await params;
   
-  // Get optional position from query params
+  // Get optional position and scale from query params
   const url = new URL(request.url);
   const position = url.searchParams.get("position"); // "AGREE" or "DISAGREE"
+  const scaleParam = url.searchParams.get("scale"); // "2" or "3" for high-res downloads
+  const scale = scaleParam ? Math.min(Math.max(parseInt(scaleParam) || 1, 1), 3) : 1;
+  
+  const WIDTH = BASE_WIDTH * scale;
+  const HEIGHT = BASE_HEIGHT * scale;
 
   // Fetch the take from database
   const take = await prisma.take.findUnique({
