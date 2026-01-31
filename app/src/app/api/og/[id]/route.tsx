@@ -1,11 +1,10 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/db";
 
-// Use Node.js runtime (50MB limit) instead of Edge (1MB limit)
-
-// OG Image dimensions (base)
-const BASE_WIDTH = 1200;
-const BASE_HEIGHT = 630;
+// OG Image dimensions - 2x for crisp images
+const WIDTH = 2400;
+const HEIGHT = 1260;
+const S = 2; // Scale factor for all internal elements
 
 // Colors matching our design system
 const COLORS = {
@@ -45,9 +44,9 @@ function truncateHash(hash: string | null): string {
 function getStatusColors(status: string) {
   switch (status) {
     case "VERIFIED":
-      return { bg: "#16a34a", text: "#ffffff" }; // Green for TRUE
+      return { bg: "#16a34a", text: "#ffffff" };
     case "WRONG":
-      return { bg: "#dc2626", text: "#ffffff" }; // Red for FALSE
+      return { bg: "#dc2626", text: "#ffffff" };
     default:
       return COLORS.pending;
   }
@@ -70,16 +69,9 @@ export async function GET(
 ) {
   const { id } = await params;
   
-  // Get optional position and scale from query params
   const url = new URL(request.url);
-  const position = url.searchParams.get("position"); // "AGREE" or "DISAGREE"
-  const scaleParam = url.searchParams.get("scale"); // "2" or "3" for high-res downloads
-  const scale = scaleParam ? Math.min(Math.max(parseInt(scaleParam) || 1, 1), 3) : 1;
-  
-  const WIDTH = BASE_WIDTH * scale;
-  const HEIGHT = BASE_HEIGHT * scale;
+  const position = url.searchParams.get("position");
 
-  // Fetch the take from database
   const take = await prisma.take.findUnique({
     where: { id },
   });
@@ -89,8 +81,6 @@ export async function GET(
   }
 
   const statusColors = getStatusColors(take.status);
-
-  // Truncate long takes for better display
   const displayText =
     take.text.length > 140 ? take.text.slice(0, 140) + "..." : take.text;
 
@@ -107,16 +97,15 @@ export async function GET(
           fontFamily: "monospace",
         }}
       >
-        {/* Receipt card - portrait oriented like a real receipt */}
+        {/* Receipt card */}
         <div
           style={{
-            width: 340,
+            width: 340 * S,
             backgroundColor: COLORS.paper,
-            borderRadius: 8,
+            borderRadius: 8 * S,
             display: "flex",
             flexDirection: "column",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
-            position: "relative",
+            boxShadow: `0 ${20 * S}px ${60 * S}px rgba(0,0,0,0.4)`,
             overflow: "hidden",
           }}
         >
@@ -125,17 +114,17 @@ export async function GET(
             style={{
               display: "flex",
               justifyContent: "center",
-              gap: 6,
-              padding: "10px 0",
-              borderBottom: `1px dashed ${COLORS.divider}`,
+              gap: 6 * S,
+              padding: `${10 * S}px 0`,
+              borderBottom: `${1 * S}px dashed ${COLORS.divider}`,
             }}
           >
             {Array.from({ length: 18 }).map((_, i) => (
               <div
                 key={i}
                 style={{
-                  width: 6,
-                  height: 6,
+                  width: 6 * S,
+                  height: 6 * S,
                   borderRadius: "50%",
                   backgroundColor: "#1a1a1f",
                 }}
@@ -146,7 +135,7 @@ export async function GET(
           {/* Content */}
           <div
             style={{
-              padding: "24px 28px",
+              padding: `${24 * S}px ${28 * S}px`,
               display: "flex",
               flexDirection: "column",
             }}
@@ -157,16 +146,16 @@ export async function GET(
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                paddingBottom: 16,
-                borderBottom: `2px dashed ${COLORS.divider}`,
-                marginBottom: 16,
+                paddingBottom: 16 * S,
+                borderBottom: `${2 * S}px dashed ${COLORS.divider}`,
+                marginBottom: 16 * S,
               }}
             >
               <div
                 style={{
-                  fontSize: 16,
+                  fontSize: 16 * S,
                   fontWeight: 600,
-                  letterSpacing: "4px",
+                  letterSpacing: 4 * S,
                   color: COLORS.textLight,
                 }}
               >
@@ -174,19 +163,19 @@ export async function GET(
               </div>
               <div
                 style={{
-                  fontSize: 8,
+                  fontSize: 8 * S,
                   color: COLORS.textFaded,
-                  letterSpacing: "2px",
-                  marginTop: 4,
+                  letterSpacing: 2 * S,
+                  marginTop: 4 * S,
                 }}
               >
                 HOT TAKES • LOCKED IN
               </div>
               <div
                 style={{
-                  fontSize: 9,
+                  fontSize: 9 * S,
                   color: COLORS.textFaded,
-                  marginTop: 6,
+                  marginTop: 6 * S,
                 }}
               >
                 {truncateHash(take.hash)}
@@ -196,9 +185,9 @@ export async function GET(
             {/* Take text */}
             <div
               style={{
-                fontSize: 20,
+                fontSize: 20 * S,
                 lineHeight: 1.4,
-                padding: "20px 8px",
+                padding: `${20 * S}px ${8 * S}px`,
                 textAlign: "center",
                 fontWeight: 700,
                 color: "#000",
@@ -213,8 +202,8 @@ export async function GET(
             <div
               style={{
                 width: "100%",
-                borderTop: `1px dashed ${COLORS.divider}`,
-                margin: "12px 0",
+                borderTop: `${1 * S}px dashed ${COLORS.divider}`,
+                margin: `${12 * S}px 0`,
               }}
             />
 
@@ -223,8 +212,8 @@ export async function GET(
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontSize: 12,
-                marginBottom: 6,
+                fontSize: 12 * S,
+                marginBottom: 6 * S,
               }}
             >
               <span style={{ color: COLORS.textMuted }}>FROM</span>
@@ -236,8 +225,8 @@ export async function GET(
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontSize: 12,
-                marginBottom: 6,
+                fontSize: 12 * S,
+                marginBottom: 6 * S,
               }}
             >
               <span style={{ color: COLORS.textMuted }}>LOCKED</span>
@@ -246,16 +235,16 @@ export async function GET(
               </span>
             </div>
 
-            {/* User's Position (if shared) - matches website row style */}
+            {/* User's Position */}
             {position && (
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  fontSize: 12,
-                  marginTop: 6,
-                  marginBottom: 6,
+                  fontSize: 12 * S,
+                  marginTop: 6 * S,
+                  marginBottom: 6 * S,
                 }}
               >
                 <span style={{ color: COLORS.textMuted }}>MY POSITION</span>
@@ -264,7 +253,7 @@ export async function GET(
                     fontWeight: 700,
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
+                    gap: 6 * S,
                     color: position === "AGREE" ? "#15803d" : "#b91c1c",
                   }}
                 >
@@ -279,33 +268,31 @@ export async function GET(
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                paddingTop: 16,
-                marginTop: 12,
-                borderTop: `2px dashed ${COLORS.divider}`,
+                paddingTop: 16 * S,
+                marginTop: 12 * S,
+                borderTop: `${2 * S}px dashed ${COLORS.divider}`,
               }}
             >
-              {/* Status badge */}
               <div
                 style={{
                   backgroundColor: statusColors.bg,
                   color: statusColors.text,
-                  padding: "8px 20px",
-                  borderRadius: 4,
-                  fontSize: 12,
+                  padding: `${8 * S}px ${20 * S}px`,
+                  borderRadius: 4 * S,
+                  fontSize: 12 * S,
                   fontWeight: 700,
-                  letterSpacing: "3px",
+                  letterSpacing: 3 * S,
                 }}
               >
                 {getStatusLabel(take.status)}
               </div>
 
-              {/* Resolution date */}
               {take.resolvesAt && (
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 10 * S,
                     color: COLORS.textLight,
-                    marginTop: 10,
+                    marginTop: 10 * S,
                     display: "flex",
                   }}
                 >
@@ -314,7 +301,7 @@ export async function GET(
                     style={{
                       fontWeight: 600,
                       color: COLORS.text,
-                      marginLeft: 4,
+                      marginLeft: 4 * S,
                     }}
                   >
                     {formatDate(take.resolvesAt)}
@@ -329,17 +316,17 @@ export async function GET(
             style={{
               display: "flex",
               justifyContent: "center",
-              gap: 6,
-              padding: "10px 0",
-              borderTop: `1px dashed ${COLORS.divider}`,
+              gap: 6 * S,
+              padding: `${10 * S}px 0`,
+              borderTop: `${1 * S}px dashed ${COLORS.divider}`,
             }}
           >
             {Array.from({ length: 18 }).map((_, i) => (
               <div
                 key={i}
                 style={{
-                  width: 6,
-                  height: 6,
+                  width: 6 * S,
+                  height: 6 * S,
                   borderRadius: "50%",
                   backgroundColor: "#1a1a1f",
                 }}

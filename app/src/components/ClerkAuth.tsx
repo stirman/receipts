@@ -43,6 +43,7 @@ export function ClerkAuth() {
               labelIcon={<FileText className="w-4 h-4" />}
               href="/my-takes"
             />
+            <UserButton.Action label="manageAccount" />
           </UserButton.MenuItems>
         </UserButton>
       </SignedIn>

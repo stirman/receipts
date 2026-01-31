@@ -139,7 +139,7 @@ export default function Home() {
               My Takes
               {myTakesStats && activeTab === "mine" && (
                 <span className="ml-2 text-sm font-normal text-white/50">
-                  ({myTakesStats.accuracy !== null ? `${myTakesStats.accuracy}%` : "—"}{myTakesStats.pending > 0 ? `, ${myTakesStats.pending} pending` : ""})
+                  ({myTakesStats.accuracy !== null ? `${myTakesStats.accuracy}%` : "—"}{(myTakesStats.pending ?? 0) > 0 ? `, ${myTakesStats.pending} pending` : ""})
                 </span>
               )}
             </button>
@@ -167,7 +167,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-white/10 py-8">
         <div className="max-w-6xl mx-auto px-4 text-center text-white/30 text-sm">
-          <p>Receipts — Lock in your predictions. Prove you were right.</p>
+          <p>Created by <a href="https://x.com/stirman" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">@stirman</a>. Copyright 2026.</p>
         </div>
       </footer>
     </div>

@@ -166,7 +166,15 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
             ref={textareaRef}
             id="take"
             value={take}
-            onChange={(e) => setTake(e.target.value)}
+            onChange={(e) => setTake(e.target.value.replace(/\n/g, ' '))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (take.trim() && !isOverLimit) {
+                  handleVerify(e as unknown as React.FormEvent);
+                }
+              }
+            }}
             placeholder="The Rockets will make the playoffs this season..."
             className="w-full h-32 bg-white/5 border border-white/10 rounded-lg p-4 text-white placeholder-white/30 resize-none focus:outline-none focus:border-white/30 transition-colors"
           />

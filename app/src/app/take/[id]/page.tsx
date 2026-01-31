@@ -89,7 +89,7 @@ export default async function TakePage({ params }: TakePageProps) {
       {/* Footer */}
       <footer className="border-t border-white/10 py-8 mt-12">
         <div className="max-w-6xl mx-auto px-4 text-center text-white/30 text-sm">
-          <p>Receipts — Lock in your predictions. Prove you were right.</p>
+          <p>Created by <a href="https://x.com/stirman" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">@stirman</a>. Copyright 2026.</p>
         </div>
       </footer>
     </div>
