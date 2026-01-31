@@ -1,34 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
-import { Link2, Twitter, Download, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Link2, Twitter, Download } from "lucide-react";
 
 interface ShareButtonsProps {
   takeId?: string;
 }
 
 export function ShareButtons({ takeId }: ShareButtonsProps) {
-  const { isSignedIn } = useAuth();
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [sharingToX, setSharingToX] = useState(false);
-  const [twitterConnected, setTwitterConnected] = useState(false);
-  const [twitterUsername, setTwitterUsername] = useState<string | null>(null);
-  const [tweetUrl, setTweetUrl] = useState<string | null>(null);
-
-  // Check Twitter connection status
-  useEffect(() => {
-    if (isSignedIn) {
-      fetch("/api/share/twitter")
-        .then(res => res.json())
-        .then(data => {
-          setTwitterConnected(data.connected);
-          setTwitterUsername(data.username);
-        })
-        .catch(() => {});
-    }
-  }, [isSignedIn]);
 
   const getShareUrl = () => {
     if (typeof window === "undefined") return "";
@@ -69,91 +50,13 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
   };
 
   const handleShareToX = async () => {
-    if (!takeId) {
-      // Fallback to basic share
-      const url = getShareUrl();
-      const text = "Check out this take 🧾";
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-      window.open(twitterUrl, "_blank", "width=550,height=420");
-      return;
-    }
-
-    // If not signed in, use basic share
-    if (!isSignedIn) {
-      const url = getShareUrl();
-      const text = "Check out this take 🧾";
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-      window.open(twitterUrl, "_blank", "width=550,height=420");
-      return;
-    }
-
-    // If Twitter not connected, start OAuth in popup
-    if (!twitterConnected) {
-      const popup = window.open(
-        `/api/auth/twitter?takeId=${takeId}`,
-        "twitter_oauth",
-        "width=600,height=700,menubar=no,toolbar=no"
-      );
-      // Poll for popup close and check if connected
-      const pollTimer = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(pollTimer);
-          // Recheck connection status
-          fetch("/api/share/twitter")
-            .then(res => res.json())
-            .then(data => {
-              setTwitterConnected(data.connected);
-              setTwitterUsername(data.username);
-              if (data.connected) {
-                // Now try to share
-                handleShareToX();
-              }
-            });
-        }
-      }, 500);
-      return;
-    }
-
-    // Share with image via API
-    setSharingToX(true);
-    try {
-      const response = await fetch("/api/share/twitter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          takeId,
-          text: `Check out this take 🧾\n\n${getShareUrl()}`,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.needsAuth) {
-        window.location.href = `/api/auth/twitter?takeId=${takeId}`;
-        return;
-      }
-
-      if (data.success && data.tweetUrl) {
-        setTweetUrl(data.tweetUrl);
-        // Open the tweet in a new tab
-        window.open(data.tweetUrl, "_blank");
-      } else {
-        // Fallback to basic share
-        const url = getShareUrl();
-        const text = "Check out this take 🧾";
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-        window.open(twitterUrl, "_blank", "width=550,height=420");
-      }
-    } catch (err) {
-      console.error("Failed to share:", err);
-      // Fallback
-      const url = getShareUrl();
-      const text = "Check out this take 🧾";
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-      window.open(twitterUrl, "_blank", "width=550,height=420");
-    } finally {
-      setSharingToX(false);
-    }
+    // Use Twitter Intent for now (OAuth 2.0 has known issues)
+    // This opens a pre-filled tweet popup - user clicks Post
+    // The receipt will show via OG card preview
+    const url = getShareUrl();
+    const text = "Check out this take 🧾";
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, "_blank", "width=550,height=420");
   };
 
   const handleShareToReddit = () => {
@@ -186,24 +89,11 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
 
       <button
         onClick={handleShareToX}
-        disabled={sharingToX}
-        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
       >
         <Twitter className="w-4 h-4" />
-        {sharingToX ? "Posting..." : twitterConnected ? "Post to X" : "Share to X"}
+        Share to X
       </button>
-
-      {tweetUrl && (
-        <a
-          href={tweetUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-2 bg-green-600/20 text-green-400 hover:bg-green-600/30 rounded-lg text-sm transition-colors"
-        >
-          <ExternalLink className="w-4 h-4" />
-          View Tweet
-        </a>
-      )}
 
       <button
         onClick={handleShareToReddit}
