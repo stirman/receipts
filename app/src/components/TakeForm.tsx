@@ -151,12 +151,6 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
     return (
       <form onSubmit={handleVerify} className="w-full max-w-md">
         <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-          <label
-            htmlFor="take"
-            className="block text-sm font-medium text-white/60 mb-2"
-          >
-            Lock in your take
-          </label>
           <textarea
             id="take"
             value={take}
