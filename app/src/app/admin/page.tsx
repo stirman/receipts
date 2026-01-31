@@ -76,13 +76,6 @@ const SERVICES = [
     notes: "Public API, no rate limits observed"
   },
   {
-    name: "Exa API",
-    purpose: "Web search for non-sports resolution",
-    cost: "Free tier: 1000 searches/mo, then $0.001/search",
-    dashboard: "https://dashboard.exa.ai",
-    notes: "Added to Vercel env, fallback for non-sports"
-  },
-  {
     name: "X/Twitter",
     purpose: "Share to X functionality",
     cost: "FREE - uses Intent URLs (user posts themselves)",

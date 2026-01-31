@@ -83,61 +83,6 @@ async function getSportsContext(subject: string, prediction: string, resolutionD
   return "";
 }
 
-// Search for relevant information using Exa API (fallback for non-sports)
-async function searchForContext(query: string): Promise<string> {
-  const exaApiKey = process.env.EXA_API_KEY;
-  if (!exaApiKey) {
-    console.log("No EXA_API_KEY, skipping web search");
-    return "";
-  }
-
-  try {
-    // Search with recency focus for recent events
-    const response = await fetch("https://api.exa.ai/search", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": exaApiKey,
-      },
-      body: JSON.stringify({
-        query,
-        numResults: 10,
-        useAutoprompt: true,
-        type: "auto",
-        contents: {
-          text: { maxCharacters: 1500 },
-        },
-        // Focus on recent content
-        startPublishedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Exa search failed:", response.status);
-      return "";
-    }
-
-    const data = await response.json();
-    const results = data.results || [];
-    
-    if (results.length === 0) {
-      return "No search results found.";
-    }
-
-    // Format search results as context
-    const context = results
-      .map((r: { title?: string; url?: string; text?: string }, i: number) => 
-        `[${i + 1}] ${r.title || "No title"}\nURL: ${r.url}\n${r.text || "No content"}`
-      )
-      .join("\n\n");
-
-    return `WEB SEARCH RESULTS:\n${context}`;
-  } catch (error) {
-    console.error("Exa search error:", error);
-    return "";
-  }
-}
-
 const RESOLUTION_PROMPT = `You are an AI that determines whether predictions have come true.
 
 TODAY'S DATE AND TIME: ${new Date().toISOString()}
@@ -179,18 +124,19 @@ async function resolveTake(
     const subject = take.aiSubject || "";
     const prediction = take.aiPrediction || take.text;
     
-    // First try sports-specific APIs
+    // Get sports data from ESPN API (free, no key needed)
     const sportsContext = await getSportsContext(subject, prediction, take.resolvesAt);
     console.log(`Sports context: ${sportsContext.length} chars`);
     
-    // Fall back to Exa search if no sports context
-    let searchContext = sportsContext;
-    if (!searchContext) {
-      const searchQuery = `${subject} ${prediction} final result score January 2026`.slice(0, 200);
-      console.log(`Searching for: ${searchQuery}`);
-      searchContext = await searchForContext(searchQuery);
-      console.log(`Exa search returned ${searchContext.length} chars`);
+    // If no sports context found, we can't resolve yet
+    if (!sportsContext) {
+      return { 
+        status: null, 
+        reasoning: "No sports data found - this may not be a sports prediction or the game hasn't been played yet" 
+      };
     }
+    
+    const searchContext = sportsContext;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
