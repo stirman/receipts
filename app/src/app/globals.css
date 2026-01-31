@@ -40,29 +40,29 @@ body {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: 
-    radial-gradient(ellipse 80% 80% at 20% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 80% at 80% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 60% at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
-  background-size: 200% 200%;
-  animation: gradient-drift 30s ease-in-out infinite;
+  overflow: hidden;
 }
 
-@keyframes gradient-drift {
+.animated-gradient-bg::before {
+  content: '';
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  top: -25%;
+  left: -25%;
+  background: 
+    radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(168, 85, 247, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.15) 0%, transparent 35%);
+  animation: gradient-rotate 40s linear infinite;
+}
+
+@keyframes gradient-rotate {
   0% {
-    background-position: 0% 0%;
-  }
-  25% {
-    background-position: 100% 0%;
-  }
-  50% {
-    background-position: 100% 100%;
-  }
-  75% {
-    background-position: 0% 100%;
+    transform: rotate(0deg);
   }
   100% {
-    background-position: 0% 0%;
+    transform: rotate(360deg);
   }
 }
 
