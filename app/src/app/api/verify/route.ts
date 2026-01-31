@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 
-// Get current time in a clear format for the AI
+// Get current time in Pacific for the AI
 const now = new Date();
 const currentDateTimeStr = now.toLocaleString("en-US", { 
   timeZone: "America/Los_Angeles",
@@ -14,6 +14,10 @@ const currentDateTimeStr = now.toLocaleString("en-US", {
   minute: "2-digit",
   hour12: true
 });
+
+// Helper to convert Pacific time to UTC ISO string for the AI examples
+// Pacific is UTC-8 (PST) or UTC-7 (PDT)
+const pacificOffsetHours = -8; // PST (use -7 for PDT)
 
 const SYSTEM_PROMPT = `You are an AI assistant that helps verify and structure predictions ("hot takes") for the Receipts app.
 
@@ -51,18 +55,23 @@ You must respond ONLY with valid JSON:
   "prediction": "What is being predicted",
   "timeframe": "Time period (must be FUTURE)",
   "resolutionCriteria": "How we'll verify - must reference PUBLIC DATA source",
-  "suggestedResolutionDate": "YYYY-MM-DDTHH:mm:ss format - include specific TIME for same-day events!",
+  "suggestedResolutionDate": "YYYY-MM-DDTHH:mm:ss-08:00 format (PACIFIC TIME with offset!) - include specific TIME for same-day events!",
   "needsSpecificTime": boolean (true for events like game results, market closes, specific event times - users want to share receipts right when events end),
   "explanation": "Brief explanation (shown to user)"
 }
 
-IMPORTANT for resolution timing:
-- For sports games happening TODAY: Set resolution to ~2-3 hours after typical game start time (e.g., 7pm PT game → resolve around 10pm PT)
+⚠️ TIMEZONE: All times must be in PACIFIC TIME (America/Los_Angeles). 
+- Use -08:00 offset for PST (Nov-Mar) or -07:00 for PDT (Mar-Nov)
+- Example for 10pm Pacific tonight: "2026-01-30T22:00:00-08:00"
+- Example for midnight Pacific: "2026-01-31T00:00:00-08:00" (this is Jan 31 at 12:00 AM Pacific)
+
+IMPORTANT for resolution timing (ALL TIMES IN PACIFIC):
+- For sports games happening TODAY: Set resolution to ~2-3 hours after typical game start time (e.g., 7pm PT game → resolve around 10:00 PM Pacific → "2026-01-30T22:00:00-08:00")
 - For sports games: Set resolution to ~2-3 hours after typical game start time (games usually last 2-3 hours)
-- For market/price predictions: Use market close time (e.g., 4pm ET / 1pm PT for US markets)
-- For event announcements: Use end of day if no specific time
+- For market/price predictions: Use market close time (1pm Pacific for US markets)
+- For "end of day" or "tonight" predictions: Use 11:59 PM Pacific (e.g., "2026-01-30T23:59:00-08:00")
 - Set needsSpecificTime=true when the exact timing matters (game results, event outcomes)
-- ALWAYS include a specific time for same-day events, not just the date!
+- ALWAYS include the -08:00 (PST) or -07:00 (PDT) timezone offset!
 
 Sports seasons reference:
 - NBA 2025-26: Regular season ends mid-April 2026, Finals in June 2026
