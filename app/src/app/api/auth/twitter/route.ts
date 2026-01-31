@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { TwitterApi } from "twitter-api-v2";
 
-// Start Twitter OAuth flow
+// Start Twitter OAuth 2.0 flow with PKCE
 export async function GET(request: NextRequest) {
   const { userId: clerkUserId } = await auth();
   
@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const apiKey = process.env.TWITTER_API_KEY;
-  const apiSecret = process.env.TWITTER_API_SECRET;
+  const clientId = process.env.TWITTER_CLIENT_ID;
+  const clientSecret = process.env.TWITTER_CLIENT_SECRET;
   
-  if (!apiKey || !apiSecret) {
+  if (!clientId || !clientSecret) {
     return NextResponse.json(
       { error: "Twitter API not configured" },
       { status: 500 }
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const client = new TwitterApi({
-      appKey: apiKey,
-      appSecret: apiSecret,
+      clientId,
+      clientSecret,
     });
 
     // Get the callback URL from the request
@@ -36,22 +36,23 @@ export async function GET(request: NextRequest) {
     // Get the takeId from query params if present (to redirect back after auth)
     const takeId = request.nextUrl.searchParams.get("takeId");
 
-    // Generate OAuth link
-    const { url, oauth_token, oauth_token_secret } = await client.generateAuthLink(
+    // Generate OAuth 2.0 link with PKCE
+    const { url, codeVerifier, state } = client.generateOAuth2AuthLink(
       callbackUrl,
-      { linkMode: "authorize" }
+      { 
+        scope: ["tweet.read", "tweet.write", "users.read", "offline.access"],
+      }
     );
 
-    // Store oauth_token_secret in a cookie for the callback
-    // Also store takeId if present
+    // Store codeVerifier and state in cookies for the callback
     const response = NextResponse.redirect(url);
-    response.cookies.set("twitter_oauth_token", oauth_token, {
+    response.cookies.set("twitter_code_verifier", codeVerifier, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 600, // 10 minutes
     });
-    response.cookies.set("twitter_oauth_token_secret", oauth_token_secret, {
+    response.cookies.set("twitter_oauth_state", state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

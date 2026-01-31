@@ -22,7 +22,59 @@ export async function GET() {
   });
 }
 
-// Share to Twitter with image
+// Helper to refresh OAuth 2.0 token if needed
+async function getValidClient(user: {
+  twitterAccessToken: string | null;
+  twitterAccessSecret: string | null; // This stores refresh token for OAuth 2.0
+}, clerkUserId: string): Promise<TwitterApi | null> {
+  const clientId = process.env.TWITTER_CLIENT_ID;
+  const clientSecret = process.env.TWITTER_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret || !user.twitterAccessToken) {
+    return null;
+  }
+
+  // Try using the current access token
+  let client = new TwitterApi(user.twitterAccessToken);
+  
+  try {
+    // Test if the token is still valid
+    await client.v2.me();
+    return client;
+  } catch (error: unknown) {
+    // If token expired and we have a refresh token, try to refresh
+    const err = error as { code?: number };
+    if (err.code === 401 && user.twitterAccessSecret) {
+      try {
+        const refreshClient = new TwitterApi({
+          clientId,
+          clientSecret,
+        });
+        
+        const { accessToken, refreshToken } = await refreshClient.refreshOAuth2Token(
+          user.twitterAccessSecret
+        );
+        
+        // Update tokens in database
+        await prisma.user.update({
+          where: { clerkId: clerkUserId },
+          data: {
+            twitterAccessToken: accessToken,
+            twitterAccessSecret: refreshToken || user.twitterAccessSecret,
+          },
+        });
+        
+        return new TwitterApi(accessToken);
+      } catch {
+        // Refresh failed, user needs to re-auth
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+// Share to Twitter
 export async function POST(request: NextRequest) {
   const { userId: clerkUserId } = await auth();
   
@@ -30,16 +82,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
-    );
-  }
-
-  const apiKey = process.env.TWITTER_API_KEY;
-  const apiSecret = process.env.TWITTER_API_SECRET;
-  
-  if (!apiKey || !apiSecret) {
-    return NextResponse.json(
-      { error: "Twitter API not configured" },
-      { status: 500 }
     );
   }
 
@@ -64,47 +106,32 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!user?.twitterAccessToken || !user?.twitterAccessSecret) {
+    if (!user?.twitterAccessToken) {
       return NextResponse.json(
         { error: "Twitter not connected", needsAuth: true },
         { status: 401 }
       );
     }
 
-    // Create Twitter client with user's tokens
-    const client = new TwitterApi({
-      appKey: apiKey,
-      appSecret: apiSecret,
-      accessToken: user.twitterAccessToken,
-      accessSecret: user.twitterAccessSecret,
-    });
-
-    // Get the receipt image
-    const baseUrl = request.nextUrl.origin;
-    const imageResponse = await fetch(`${baseUrl}/api/og/${takeId}`);
+    // Get a valid client (refreshes token if needed)
+    const client = await getValidClient(user, clerkUserId);
     
-    if (!imageResponse.ok) {
+    if (!client) {
       return NextResponse.json(
-        { error: "Failed to generate receipt image" },
-        { status: 500 }
+        { error: "Twitter authentication expired", needsAuth: true },
+        { status: 401 }
       );
     }
 
-    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-
-    // Upload media to Twitter
-    const mediaId = await client.v1.uploadMedia(imageBuffer, {
-      mimeType: "image/png",
-    });
-
     // Get the take URL
+    const baseUrl = request.nextUrl.origin;
     const takeUrl = `${baseUrl}/take/${takeId}`;
     const tweetText = text || `Check out this take 🧾\n\n${takeUrl}`;
 
-    // Post tweet with media
+    // Post tweet (without media for now - OAuth 2.0 media upload requires different approach)
+    // The receipt card will show via Twitter's link preview
     const tweet = await client.v2.tweet({
       text: tweetText,
-      media: { media_ids: [mediaId] },
     });
 
     return NextResponse.json({
