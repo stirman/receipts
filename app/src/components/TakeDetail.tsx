@@ -243,6 +243,7 @@ export function TakeDetail({ take }: TakeDetailProps) {
           takeId={take.id} 
           userPosition={userPosition} 
           takeStatus={take.status as "PENDING" | "VERIFIED" | "WRONG"}
+          authorUsername={take.author}
         />
       </div>
 

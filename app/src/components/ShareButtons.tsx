@@ -1,29 +1,41 @@
 "use client";
 
 import { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { Link2, Twitter, Download } from "lucide-react";
 
 interface ShareButtonsProps {
   takeId?: string;
   userPosition?: "AGREE" | "DISAGREE" | null;
   takeStatus?: "PENDING" | "VERIFIED" | "WRONG";
+  authorUsername?: string;
 }
 
-export function ShareButtons({ takeId, userPosition, takeStatus }: ShareButtonsProps) {
+export function ShareButtons({ takeId, userPosition, takeStatus, authorUsername }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const { user } = useUser();
+  
+  // Check if current user is the author
+  const currentUsername = user?.username || user?.firstName || "";
+  const isAuthor = currentUsername && authorUsername && 
+    currentUsername.toLowerCase() === authorUsername.toLowerCase();
 
-  // Check if user "called it" (was right)
+  // Check if user "called it" (was right) - for voters
   const userCalledIt = userPosition && takeStatus && takeStatus !== "PENDING" && (
     (userPosition === "AGREE" && takeStatus === "VERIFIED") ||
     (userPosition === "DISAGREE" && takeStatus === "WRONG")
   );
 
-  // Check if user was wrong
+  // Check if user was wrong - for voters
   const userWasWrong = userPosition && takeStatus && takeStatus !== "PENDING" && (
     (userPosition === "AGREE" && takeStatus === "WRONG") ||
     (userPosition === "DISAGREE" && takeStatus === "VERIFIED")
   );
+
+  // Author-specific states
+  const authorWon = isAuthor && takeStatus === "VERIFIED";
+  const authorLost = isAuthor && takeStatus === "WRONG";
 
   const getShareUrl = () => {
     if (typeof window === "undefined") return "";
@@ -72,12 +84,21 @@ export function ShareButtons({ takeId, userPosition, takeStatus }: ShareButtonsP
     }
   };
 
+  // Get share text based on status and whether user is author
+  const getShareText = () => {
+    if (takeStatus === "PENDING") {
+      return "Here's my hot take. Agree or disagree? 🧾";
+    } else if (takeStatus === "VERIFIED") {
+      return isAuthor ? "TOLD Y'ALL! 🧾👑" : "I CALLED IT 🧾👑";
+    } else if (takeStatus === "WRONG") {
+      return isAuthor ? "Caught an L 🧾😅" : "🤡 I was wrong on this one...";
+    }
+    return "Check out this take 🧾";
+  };
+
   const handleShareToX = async () => {
-    // Use Twitter Intent for now (OAuth 2.0 has known issues)
-    // This opens a pre-filled tweet popup - user clicks Post
-    // The receipt will show via OG card preview
     const url = getShareUrl();
-    const text = "Check out this take 🧾";
+    const text = getShareText();
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
     window.open(twitterUrl, "_blank", "width=550,height=420");
   };
@@ -96,6 +117,22 @@ export function ShareButtons({ takeId, userPosition, takeStatus }: ShareButtonsP
     window.open(twitterUrl, "_blank", "width=550,height=420");
   };
 
+  // Author brag button
+  const handleTellEm = () => {
+    const url = getShareUrl();
+    const text = "TOLD Y'ALL! 🧾👑";
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, "_blank", "width=550,height=420");
+  };
+
+  // Author L button
+  const handleCaughtAnL = () => {
+    const url = getShareUrl();
+    const text = "Caught an L 🧾😅";
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, "_blank", "width=550,height=420");
+  };
+
   const handleShareToReddit = () => {
     const url = getShareUrl();
     const title = "Check out this take on Receipts";
@@ -105,18 +142,38 @@ export function ShareButtons({ takeId, userPosition, takeStatus }: ShareButtonsP
 
   return (
     <div className="flex flex-wrap justify-center gap-3">
-      {/* "I Called It" button - only shows when user was RIGHT */}
-      {userCalledIt && (
+      {/* Author "Tell 'em!" button - when author's take was RIGHT */}
+      {authorWon && (
+        <button
+          onClick={handleTellEm}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-lg text-sm font-bold transition-colors shadow-lg hover:shadow-yellow-500/25"
+        >
+          👑 Tell &apos;em!
+        </button>
+      )}
+
+      {/* Author "Caught an L" button - when author's take was WRONG */}
+      {authorLost && (
+        <button
+          onClick={handleCaughtAnL}
+          className="flex items-center gap-2 px-5 py-2.5 bg-red-600/70 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          😅 Caught an L
+        </button>
+      )}
+
+      {/* Voter "I Called It" button - only shows when voter was RIGHT (and not author) */}
+      {userCalledIt && !isAuthor && (
         <button
           onClick={handleCalledIt}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold transition-colors animate-pulse"
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold transition-colors"
         >
           👑 I Called It!
         </button>
       )}
 
-      {/* "Clown Me" button - only shows when user was WRONG */}
-      {userWasWrong && (
+      {/* Voter "Own the L" button - only shows when voter was WRONG (and not author) */}
+      {userWasWrong && !isAuthor && (
         <button
           onClick={handleClownMe}
           className="flex items-center gap-2 px-4 py-2 bg-red-600/50 hover:bg-red-600/70 text-white rounded-lg text-sm transition-colors"
