@@ -64,7 +64,7 @@ export default function MyTakesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen text-white relative">
       <Header />
 
       <main className="max-w-6xl mx-auto px-4 py-12">

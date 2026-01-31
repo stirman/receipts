@@ -18,6 +18,29 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatDateWithTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const dateFormatted = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  
+  // Check if time is not midnight (00:00) - if so, show time
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  if (hours !== 0 || minutes !== 0) {
+    const timeFormatted = date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    return `${dateFormatted} @ ${timeFormatted}`;
+  }
+  
+  return dateFormatted;
+}
+
 function truncateHash(hash: string | null): string {
   if (!hash) return "#--------...----";
   return `#${hash.slice(0, 8)}...${hash.slice(-4)}`;
@@ -133,7 +156,7 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
               <div className="text-[0.7rem] text-receipt-text-light mt-2.5">
                 {take.status === "PENDING" ? "Resolves" : "Resolved"}{" "}
                 <span className="font-semibold text-receipt-text">
-                  {formatDate(take.resolvesAt)}
+                  {formatDateWithTime(take.resolvesAt)}
                 </span>
               </div>
             )}

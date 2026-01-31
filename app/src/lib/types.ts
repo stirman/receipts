@@ -28,5 +28,6 @@ export interface AIVerificationResult {
   timeframe: string | null;
   resolutionCriteria: string | null;
   suggestedResolutionDate: string | null;
+  needsSpecificTime?: boolean;
   explanation: string;
 }

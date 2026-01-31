@@ -78,7 +78,7 @@ export default async function TakePage({ params }: TakePageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen text-white relative">
       <Header />
 
       {/* Take Detail */}

@@ -29,6 +29,29 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatDateWithTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const dateFormatted = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  
+  // Check if time is not midnight (00:00) - if so, show time
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  if (hours !== 0 || minutes !== 0) {
+    const timeFormatted = date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    return `${dateFormatted} @ ${timeFormatted}`;
+  }
+  
+  return dateFormatted;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
     PENDING: "PENDING",
@@ -184,14 +207,14 @@ export function TakeDetail({ take }: TakeDetailProps) {
                         <CountdownTimer targetDate={take.resolvesAt} />
                       </div>
                       <span className="text-receipt-text-muted">
-                        {formatDate(take.resolvesAt)}
+                        {formatDateWithTime(take.resolvesAt)}
                       </span>
                     </>
                   ) : (
                     <>
                       Resolved{" "}
                       <span className="font-semibold text-receipt-text">
-                        {formatDate(take.resolvesAt)}
+                        {formatDateWithTime(take.resolvesAt)}
                       </span>
                     </>
                   )}

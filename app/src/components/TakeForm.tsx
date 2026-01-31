@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth, useUser, SignInButton } from "@clerk/nextjs";
 import type { Take, AIVerificationResult } from "@/lib/types";
 
@@ -13,6 +13,7 @@ type FormStep = "input" | "verifying" | "confirm" | "suggesting" | "signing_in" 
 export function TakeForm({ onSuccess }: TakeFormProps) {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [take, setTake] = useState("");
   const [step, setStep] = useState<FormStep>("input");
@@ -68,6 +69,16 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
       saveTake();
     }
   }, [isSignedIn, pendingSave, step, saveTake]);
+
+  // Auto-focus textarea when navigating via #create hash
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#create") {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+    }
+  }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +163,7 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
       <form onSubmit={handleVerify} className="w-full max-w-md">
         <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
           <textarea
+            ref={textareaRef}
             id="take"
             value={take}
             onChange={(e) => setTake(e.target.value)}
@@ -275,6 +287,17 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
                       day: "numeric",
                       year: "numeric",
                     })}
+                    {verification.needsSpecificTime && (
+                      <span className="text-white/70 ml-1">
+                        @ {new Date(
+                          verification.suggestedResolutionDate
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}
+                      </span>
+                    )}
                   </span>
                 </div>
               )}

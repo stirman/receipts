@@ -33,14 +33,16 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans);
   min-height: 100vh;
+  position: relative;
 }
 
 /* Animated gradient background */
 .animated-gradient-bg {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .animated-gradient-bg::before {
@@ -64,6 +66,12 @@ body {
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* Ensure content sits above gradient */
+body > *:not(.animated-gradient-bg) {
+  position: relative;
+  z-index: 1;
 }
 
 /* Receipt perforated edge effect */
