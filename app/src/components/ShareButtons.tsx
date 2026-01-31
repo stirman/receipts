@@ -5,15 +5,21 @@ import { Link2, Twitter, Download } from "lucide-react";
 
 interface ShareButtonsProps {
   takeId?: string;
+  userPosition?: "AGREE" | "DISAGREE" | null;
 }
 
-export function ShareButtons({ takeId }: ShareButtonsProps) {
+export function ShareButtons({ takeId, userPosition }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const getShareUrl = () => {
     if (typeof window === "undefined") return "";
-    return window.location.href;
+    const baseUrl = window.location.origin + window.location.pathname;
+    // Add position to URL if user has taken a position
+    if (userPosition) {
+      return `${baseUrl}?position=${userPosition}`;
+    }
+    return baseUrl;
   };
 
   const handleCopyLink = async () => {
@@ -31,7 +37,11 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
     
     setDownloading(true);
     try {
-      const response = await fetch(`/api/og/${takeId}`);
+      // Include position in the OG image if user has one
+      const ogUrl = userPosition 
+        ? `/api/og/${takeId}?position=${userPosition}`
+        : `/api/og/${takeId}`;
+      const response = await fetch(ogUrl);
       const blob = await response.blob();
       
       const url = URL.createObjectURL(blob);

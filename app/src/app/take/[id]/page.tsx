@@ -6,25 +6,37 @@ import { TakeDetail } from "@/components/TakeDetail";
 
 interface TakePageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ position?: string }>;
 }
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: TakePageProps): Promise<Metadata> {
   const { id } = await params;
+  const { position } = await searchParams;
   const take = await prisma.take.findUnique({ where: { id } });
 
   if (!take) {
     return { title: "Take Not Found | Receipts" };
   }
 
-  const ogImageUrl = `/api/og/${id}`;
+  // Include position in OG image URL if provided
+  const ogImageUrl = position 
+    ? `/api/og/${id}?position=${position}`
+    : `/api/og/${id}`;
+
+  const positionText = position === "AGREE" 
+    ? " — I Agree!" 
+    : position === "DISAGREE" 
+    ? " — I Disagree!" 
+    : "";
 
   return {
-    title: `${take.author}'s Take | Receipts`,
+    title: `${take.author}'s Take${positionText} | Receipts`,
     description: take.text,
     openGraph: {
-      title: `${take.author}'s Take | Receipts`,
+      title: `${take.author}'s Take${positionText} | Receipts`,
       description: take.text,
       type: "website",
       images: [
@@ -38,7 +50,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${take.author}'s Take | Receipts`,
+      title: `${take.author}'s Take${positionText} | Receipts`,
       description: take.text,
       images: [ogImageUrl],
     },

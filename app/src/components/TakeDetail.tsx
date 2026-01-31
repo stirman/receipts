@@ -202,7 +202,7 @@ export function TakeDetail({ take }: TakeDetailProps) {
       {/* Share section */}
       <div className="mt-8 text-center">
         <p className="text-white/50 text-sm mb-4">Share this receipt</p>
-        <ShareButtons takeId={take.id} />
+        <ShareButtons takeId={take.id} userPosition={userPosition} />
       </div>
 
       {/* Admin delete button */}

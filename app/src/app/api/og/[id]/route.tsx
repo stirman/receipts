@@ -69,6 +69,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  
+  // Get optional position from query params
+  const url = new URL(request.url);
+  const position = url.searchParams.get("position"); // "AGREE" or "DISAGREE"
 
   // Fetch the take from database
   const take = await prisma.take.findUnique({
@@ -236,6 +240,35 @@ export async function GET(
                 {formatDate(take.lockedAt)}
               </span>
             </div>
+
+            {/* User's Position (if shared) */}
+            {position && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginTop: 12,
+                  marginBottom: 4,
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: position === "AGREE" ? "#16a34a" : "#dc2626",
+                    color: "#ffffff",
+                    padding: "6px 16px",
+                    borderRadius: 4,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "2px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  {position === "AGREE" ? "👍" : "👎"} I {position}
+                </div>
+              </div>
+            )}
 
             {/* Status section */}
             <div

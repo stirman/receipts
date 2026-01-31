@@ -35,6 +35,8 @@ export default function RootLayout({
   const content = (
     <html lang="en">
       <body className={`${inter.variable} ${spaceMono.variable} antialiased`}>
+        {/* Animated gradient background */}
+        <div className="animated-gradient-bg" aria-hidden="true" />
         {children}
       </body>
     </html>
