@@ -338,7 +338,7 @@ export function TakeForm({ onSuccess }: TakeFormProps) {
                 onClick={handleMakeClearer}
                 className="flex-1 px-4 py-2.5 bg-amber-500 text-black font-semibold rounded-lg hover:bg-amber-400 transition-colors text-sm"
               >
-                Make It Clearer
+                ✨ Make It Clearer
               </button>
             )}
           </div>
