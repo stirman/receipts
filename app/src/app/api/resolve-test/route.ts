@@ -5,28 +5,82 @@ import OpenAI from "openai";
 // Temporary test endpoint for resolution
 // TODO: Move this logic to /api/cron/resolve once deployment issue is fixed
 
+// Search for relevant information using Exa API
+async function searchForContext(query: string): Promise<string> {
+  const exaApiKey = process.env.EXA_API_KEY;
+  if (!exaApiKey) {
+    console.log("No EXA_API_KEY, skipping web search");
+    return "";
+  }
+
+  try {
+    const response = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": exaApiKey,
+      },
+      body: JSON.stringify({
+        query,
+        numResults: 5,
+        useAutoprompt: true,
+        type: "neural",
+        contents: {
+          text: { maxCharacters: 1000 },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Exa search failed:", response.status);
+      return "";
+    }
+
+    const data = await response.json();
+    const results = data.results || [];
+    
+    if (results.length === 0) {
+      return "No search results found.";
+    }
+
+    // Format search results as context
+    const context = results
+      .map((r: { title?: string; url?: string; text?: string }, i: number) => 
+        `[${i + 1}] ${r.title || "No title"}\nURL: ${r.url}\n${r.text || "No content"}`
+      )
+      .join("\n\n");
+
+    return `WEB SEARCH RESULTS:\n${context}`;
+  } catch (error) {
+    console.error("Exa search error:", error);
+    return "";
+  }
+}
+
 const RESOLUTION_PROMPT = `You are an AI that determines whether predictions have come true.
 
 TODAY'S DATE AND TIME: ${new Date().toISOString()}
 
-You will be given a prediction with its resolution criteria. Your job is to:
-1. Search your knowledge for relevant information
+You will be given a prediction with its resolution criteria, along with WEB SEARCH RESULTS containing current information.
+
+Your job is to:
+1. Analyze the web search results for relevant information
 2. Determine if the prediction is TRUE, FALSE, or UNDETERMINED
-3. Provide clear reasoning with sources/facts
+3. Provide clear reasoning with sources/facts from the search results
 
 IMPORTANT RULES:
 - Only mark as TRUE if there is clear evidence the prediction came true
 - Only mark as FALSE if there is clear evidence it did NOT come true  
-- Mark as UNDETERMINED if you cannot find sufficient information
-- Be objective and cite specific facts, scores, prices, announcements, etc.
+- Mark as UNDETERMINED if the search results don't contain sufficient information
+- Be objective and cite specific facts, scores, prices, announcements from the search results
 - If the event hasn't happened yet (even if past resolution date), mark UNDETERMINED
 
 Respond with JSON:
 {
   "resolution": "TRUE" | "FALSE" | "UNDETERMINED",
   "confidence": "HIGH" | "MEDIUM" | "LOW",
-  "reasoning": "Detailed explanation with specific facts, dates, scores, etc.",
-  "sources": "What information sources you used (e.g., 'NBA official results', 'Bitcoin price data')"
+  "reasoning": "Detailed explanation with specific facts, dates, scores, etc. from the search results",
+  "sources": "URLs or sources from the search results you used"
 }`;
 
 async function resolveTake(
@@ -40,6 +94,14 @@ async function resolveTake(
   }
 ): Promise<{ status: "VERIFIED" | "WRONG" | null; reasoning: string }> {
   try {
+    // Build search query from the prediction
+    const searchQuery = `${take.aiSubject || ""} ${take.aiPrediction || take.text} results score outcome`;
+    console.log(`Searching for: ${searchQuery}`);
+    
+    // Search for current information
+    const searchContext = await searchForContext(searchQuery);
+    console.log(`Search returned ${searchContext.length} chars`);
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       max_tokens: 1024,
@@ -54,7 +116,9 @@ SUBJECT: ${take.aiSubject || "Not specified"}
 WHAT WAS PREDICTED: ${take.aiPrediction || "Not specified"}
 RESOLUTION CRITERIA: ${take.aiResolutionCriteria || "Not specified"}
 
-Has this prediction come true?`,
+${searchContext}
+
+Based on the search results above, has this prediction come true?`,
         },
       ],
       response_format: { type: "json_object" },
