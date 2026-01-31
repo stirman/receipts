@@ -28,10 +28,10 @@ async function getESPNScores(sport: string, league: string, date: string): Promi
     const data = await response.json();
     const events = data.events || [];
     
-    return events.map((event: { name: string; status: { type: { name: string } }; competitions: Array<{ competitors: Array<{ team: { abbreviation: string; displayName: string }; score: string }> }> }) => {
+    return events.map((event: { name: string; status: { type: { name: string } }; competitions: Array<{ competitors: Array<{ team: { abbreviation: string; displayName: string }; score: string; homeAway?: string }> }> }) => {
       const competition = event.competitions[0];
-      const home = competition.competitors.find((c: { homeAway?: string }) => c.homeAway === "home") || competition.competitors[0];
-      const away = competition.competitors.find((c: { homeAway?: string }) => c.homeAway === "away") || competition.competitors[1];
+      const home = competition.competitors.find((c) => c.homeAway === "home") || competition.competitors[0];
+      const away = competition.competitors.find((c) => c.homeAway === "away") || competition.competitors[1];
       
       return {
         name: event.name,
