@@ -6,6 +6,7 @@ import { ThumbsUp, ThumbsDown, Trash2 } from "lucide-react";
 import { AgreementSection } from "./AgreementSection";
 import { ShareButtons } from "./ShareButtons";
 import { ConfirmModal } from "./ConfirmModal";
+import { CountdownTimer } from "./CountdownTimer";
 
 interface TakeDetailProps {
   take: {
@@ -177,10 +178,23 @@ export function TakeDetail({ take }: TakeDetailProps) {
               <StatusBadge status={take.status} />
               {take.resolvesAt && (
                 <div className="text-[0.7rem] text-receipt-text-light mt-2.5">
-                  {take.status === "PENDING" ? "Resolves" : "Resolved"}{" "}
-                  <span className="font-semibold text-receipt-text">
-                    {formatDate(take.resolvesAt)}
-                  </span>
+                  {take.status === "PENDING" ? (
+                    <>
+                      <div className="mb-1">
+                        <CountdownTimer targetDate={take.resolvesAt} />
+                      </div>
+                      <span className="text-receipt-text-muted">
+                        {formatDate(take.resolvesAt)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Resolved{" "}
+                      <span className="font-semibold text-receipt-text">
+                        {formatDate(take.resolvesAt)}
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
             </div>

@@ -38,9 +38,16 @@ You must respond ONLY with valid JSON:
   "prediction": "What is being predicted",
   "timeframe": "Time period (must be FUTURE)",
   "resolutionCriteria": "How we'll verify - must reference PUBLIC DATA source",
-  "suggestedResolutionDate": "YYYY-MM-DD format - MUST be after ${new Date().toISOString().split("T")[0]}",
+  "suggestedResolutionDate": "YYYY-MM-DDTHH:mm:ss format - MUST be after ${new Date().toISOString().split("T")[0]}",
+  "needsSpecificTime": boolean (true for events like game results, market closes, specific event times - users want to share receipts right when events end),
   "explanation": "Brief explanation (shown to user)"
 }
+
+IMPORTANT for resolution timing:
+- For sports games: Set resolution to ~2-3 hours after typical game start time (games usually last 2-3 hours)
+- For market/price predictions: Use market close time (e.g., 4pm ET for US markets)
+- For event announcements: Use end of day if no specific time
+- Set needsSpecificTime=true when the exact timing matters (game results, event outcomes)
 
 Sports seasons reference:
 - NBA 2025-26: Regular season ends mid-April 2026, Finals in June 2026

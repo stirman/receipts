@@ -23,15 +23,23 @@ model Take {
   aiPrediction    String?   // e.g., "will make the playoffs"
   aiTimeframe     String?   // e.g., "2025-26 NBA season"
   aiResolutionCriteria String? // e.g., "Team finishes in top 10 of Western Conference"
+  aiNeedsTime     Boolean   @default(false) // Does this take need a specific resolution time?
 
   // Timestamps
   createdAt   DateTime  @default(now())
   lockedAt    DateTime  @default(now())
-  resolvesAt  DateTime?
+  resolvesAt  DateTime? // Can include time for time-sensitive takes
   resolvedAt  DateTime?
 
   // Status: pending | verified | wrong
   status      TakeStatus @default(PENDING)
+  
+  // Resolution details
+  resolutionReasoning String? // AI explanation for the resolution
+  
+  // Appeal system
+  appealStatus    AppealStatus? // null = no appeal, PENDING = under review, UPHELD/OVERTURNED
+  appealReasoning String?       // AI explanation for appeal decision
 
   // Clerk user relation
   clerkUserId String?
@@ -94,4 +102,10 @@ enum TakeStatus {
   PENDING
   VERIFIED
   WRONG
+}
+
+enum AppealStatus {
+  PENDING
+  UPHELD    // Original resolution was correct
+  OVERTURNED // Resolution was changed
 }
