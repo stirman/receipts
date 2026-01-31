@@ -79,19 +79,19 @@ export default function Home() {
       <Header />
 
       {/* Hero Section */}
-      <section className="max-w-6xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
+      <section className="max-w-6xl mx-auto px-4 py-8 sm:py-16 text-center">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
           Lock in your takes.
           <br />
           <span className="text-white/60">Get your receipts.</span>
         </h1>
-        <p className="text-white/50 text-lg max-w-xl mx-auto mb-12">
+        <p className="text-white/50 text-base sm:text-lg max-w-xl mx-auto mb-8 sm:mb-12 px-2">
           The &ldquo;I told you so&rdquo; moment, formalized. Make predictions,
           lock them in with a timestamp, and prove you were right all along.
         </p>
 
         {/* Take Form */}
-        <div id="create" className="flex justify-center mb-16 scroll-mt-24">
+        <div id="create" className="flex justify-center mb-12 sm:mb-16 scroll-mt-24 px-2">
           <TakeForm onSuccess={handleNewTake} />
         </div>
       </section>
@@ -99,17 +99,17 @@ export default function Home() {
       {/* Takes Section */}
       <section className="max-w-6xl mx-auto px-4 pb-20">
         {/* Tab Navigation */}
-        <div className="flex items-center gap-6 mb-8">
+        <div className="flex items-center gap-3 sm:gap-6 mb-6 sm:mb-8 overflow-x-auto">
           <button
             onClick={() => handleTabChange("trending")}
-            className={`text-lg font-semibold transition-colors flex items-center gap-1 ${
+            className={`text-base sm:text-lg font-semibold transition-colors flex items-center gap-1 whitespace-nowrap ${
               activeTab === "trending" 
                 ? "text-white" 
                 : "text-white/40 hover:text-white/60"
             }`}
           >
             {isLoading && activeTab === "trending" ? (
-              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
@@ -119,7 +119,7 @@ export default function Home() {
           </button>
           <button
             onClick={() => handleTabChange("recent")}
-            className={`text-lg font-semibold transition-colors ${
+            className={`text-base sm:text-lg font-semibold transition-colors whitespace-nowrap ${
               activeTab === "recent" 
                 ? "text-white" 
                 : "text-white/40 hover:text-white/60"
@@ -130,7 +130,7 @@ export default function Home() {
           {isSignedIn && (
             <button
               onClick={() => handleTabChange("mine")}
-              className={`text-lg font-semibold transition-colors ${
+              className={`text-base sm:text-lg font-semibold transition-colors whitespace-nowrap ${
                 activeTab === "mine" 
                   ? "text-white" 
                   : "text-white/40 hover:text-white/60"
@@ -138,7 +138,7 @@ export default function Home() {
             >
               My Takes
               {myTakesStats && activeTab === "mine" && (
-                <span className="ml-2 text-sm font-normal text-white/50">
+                <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-white/50">
                   ({myTakesStats.accuracy !== null ? `${myTakesStats.accuracy}%` : "—"}{(myTakesStats.pending ?? 0) > 0 ? `, ${myTakesStats.pending} pending` : ""})
                 </span>
               )}

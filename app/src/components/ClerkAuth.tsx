@@ -6,10 +6,16 @@ import {
   SignedIn,
   SignedOut,
   UserButton,
+  useUser,
 } from "@clerk/nextjs";
-import { FileText } from "lucide-react";
+import { FileText, Shield } from "lucide-react";
+
+const ADMIN_USERNAMES = ["stirman"];
 
 export function ClerkAuth() {
+  const { user } = useUser();
+  const isAdmin = user?.username && ADMIN_USERNAMES.includes(user.username.toLowerCase());
+
   // Check if Clerk is configured
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     return null;
@@ -43,6 +49,13 @@ export function ClerkAuth() {
               labelIcon={<FileText className="w-4 h-4" />}
               href="/my-takes"
             />
+            {isAdmin && (
+              <UserButton.Link
+                label="Admin"
+                labelIcon={<Shield className="w-4 h-4" />}
+                href="/admin"
+              />
+            )}
             <UserButton.Action label="manageAccount" />
           </UserButton.MenuItems>
         </UserButton>
