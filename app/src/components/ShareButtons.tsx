@@ -87,9 +87,30 @@ export function ShareButtons({ takeId }: ShareButtonsProps) {
       return;
     }
 
-    // If Twitter not connected, start OAuth
+    // If Twitter not connected, start OAuth in popup
     if (!twitterConnected) {
-      window.location.href = `/api/auth/twitter?takeId=${takeId}`;
+      const popup = window.open(
+        `/api/auth/twitter?takeId=${takeId}`,
+        "twitter_oauth",
+        "width=600,height=700,menubar=no,toolbar=no"
+      );
+      // Poll for popup close and check if connected
+      const pollTimer = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(pollTimer);
+          // Recheck connection status
+          fetch("/api/share/twitter")
+            .then(res => res.json())
+            .then(data => {
+              setTwitterConnected(data.connected);
+              setTwitterUsername(data.username);
+              if (data.connected) {
+                // Now try to share
+                handleShareToX();
+              }
+            });
+        }
+      }, 500);
       return;
     }
 
