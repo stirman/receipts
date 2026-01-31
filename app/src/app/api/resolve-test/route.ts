@@ -14,6 +14,7 @@ async function searchForContext(query: string): Promise<string> {
   }
 
   try {
+    // Search with recency focus for recent events
     const response = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: {
@@ -22,12 +23,14 @@ async function searchForContext(query: string): Promise<string> {
       },
       body: JSON.stringify({
         query,
-        numResults: 5,
+        numResults: 10,
         useAutoprompt: true,
-        type: "neural",
+        type: "auto",
         contents: {
-          text: { maxCharacters: 1000 },
+          text: { maxCharacters: 1500 },
         },
+        // Focus on recent content
+        startPublishedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       }),
     });
 
@@ -94,8 +97,11 @@ async function resolveTake(
   }
 ): Promise<{ status: "VERIFIED" | "WRONG" | null; reasoning: string }> {
   try {
-    // Build search query from the prediction
-    const searchQuery = `${take.aiSubject || ""} ${take.aiPrediction || take.text} results score outcome`;
+    // Build search query from the prediction - keep it simple and targeted
+    const subject = take.aiSubject || "";
+    const prediction = take.aiPrediction || take.text;
+    // Extract key terms and add "result" for better sports/event matching
+    const searchQuery = `${subject} ${prediction} final result score January 2026`.slice(0, 200);
     console.log(`Searching for: ${searchQuery}`);
     
     // Search for current information
