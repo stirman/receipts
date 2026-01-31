@@ -129,7 +129,7 @@ export function AgreementSection({ takeId, status, authorUsername, onPositionCha
         onConfirm={handleConfirmedVote}
         title={confirmModal.position === "AGREE" ? "Lock in your agreement?" : "Lock in your disagreement?"}
         message="Once you take a position, it's locked in permanently. You won't be able to change it later."
-        confirmText={confirmModal.position === "AGREE" ? "I Agree" : "I Disagree"}
+        confirmText="Confirm"
         confirmColor={confirmModal.position === "AGREE" ? "green" : "red"}
       />
 
