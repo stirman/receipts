@@ -37,10 +37,11 @@ export async function GET(request: NextRequest) {
     const takeId = request.nextUrl.searchParams.get("takeId");
 
     // Generate OAuth 2.0 link with PKCE
+    // Using minimal scopes - free tier may not support all
     const { url, codeVerifier, state } = client.generateOAuth2AuthLink(
       callbackUrl,
       { 
-        scope: ["tweet.read", "tweet.write", "users.read", "offline.access"],
+        scope: ["tweet.read", "tweet.write", "users.read"],
       }
     );
 
