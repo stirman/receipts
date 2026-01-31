@@ -80,7 +80,7 @@ export function ReceiptCard({ take }: ReceiptCardProps) {
           {/* Meta rows */}
           <div className="flex justify-between text-xs mb-2">
             <span className="text-receipt-text-muted">FROM</span>
-            <span className="font-semibold">@{take.author}</span>
+            <span className="font-semibold">{take.author}</span>
           </div>
           <div className="flex justify-between text-xs mb-2">
             <span className="text-receipt-text-muted">LOCKED</span>

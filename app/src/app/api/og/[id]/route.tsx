@@ -224,7 +224,7 @@ export async function GET(
             >
               <span style={{ color: COLORS.textMuted }}>FROM</span>
               <span style={{ fontWeight: 600, color: COLORS.text }}>
-                @{take.author}
+                {take.author}
               </span>
             </div>
             <div

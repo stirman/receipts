@@ -140,7 +140,7 @@ export function TakeDetail({ take }: TakeDetailProps) {
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-receipt-text-muted">FROM</span>
-                <span className="font-semibold">@{take.author}</span>
+                <span className="font-semibold">{take.author}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-receipt-text-muted">LOCKED</span>
