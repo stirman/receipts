@@ -241,32 +241,30 @@ export async function GET(
               </span>
             </div>
 
-            {/* User's Position (if shared) */}
+            {/* User's Position (if shared) - matches website row style */}
             {position && (
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "center",
-                  marginTop: 12,
-                  marginBottom: 4,
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: 12,
+                  marginTop: 6,
+                  marginBottom: 6,
                 }}
               >
-                <div
+                <span style={{ color: COLORS.textMuted }}>MY POSITION</span>
+                <span
                   style={{
-                    backgroundColor: position === "AGREE" ? "#16a34a" : "#dc2626",
-                    color: "#ffffff",
-                    padding: "6px 16px",
-                    borderRadius: 4,
-                    fontSize: 11,
                     fontWeight: 700,
-                    letterSpacing: "2px",
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
+                    color: position === "AGREE" ? "#15803d" : "#b91c1c",
                   }}
                 >
-                  {position === "AGREE" ? "👍" : "👎"} I {position}
-                </div>
+                  {position === "AGREE" ? "👍" : "👎"} {position === "AGREE" ? "AGREED" : "DISAGREED"}
+                </span>
               </div>
             )}
 
