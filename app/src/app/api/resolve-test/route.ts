@@ -5,7 +5,85 @@ import OpenAI from "openai";
 // Temporary test endpoint for resolution
 // TODO: Move this logic to /api/cron/resolve once deployment issue is fixed
 
-// Search for relevant information using Exa API
+// ESPN API for sports scores (no API key needed!)
+interface ESPNGame {
+  homeTeam: string;
+  homeScore: number;
+  awayTeam: string;
+  awayScore: number;
+  status: string;
+  name: string;
+}
+
+async function getESPNScores(sport: string, league: string, date: string): Promise<ESPNGame[]> {
+  try {
+    const url = `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard?dates=${date}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error("ESPN API failed:", response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const events = data.events || [];
+    
+    return events.map((event: { name: string; status: { type: { name: string } }; competitions: Array<{ competitors: Array<{ team: { abbreviation: string; displayName: string }; score: string }> }> }) => {
+      const competition = event.competitions[0];
+      const home = competition.competitors.find((c: { homeAway?: string }) => c.homeAway === "home") || competition.competitors[0];
+      const away = competition.competitors.find((c: { homeAway?: string }) => c.homeAway === "away") || competition.competitors[1];
+      
+      return {
+        name: event.name,
+        status: event.status.type.name,
+        homeTeam: home.team.displayName,
+        homeScore: parseInt(home.score) || 0,
+        awayTeam: away.team.displayName,
+        awayScore: parseInt(away.score) || 0,
+      };
+    });
+  } catch (error) {
+    console.error("ESPN API error:", error);
+    return [];
+  }
+}
+
+// Detect if prediction is about sports and get relevant data
+async function getSportsContext(subject: string, prediction: string, resolutionDate: Date | null): Promise<string> {
+  const textLower = `${subject} ${prediction}`.toLowerCase();
+  
+  // NBA team names and abbreviations
+  const nbaTeams = [
+    "lakers", "warriors", "celtics", "nets", "knicks", "bulls", "heat", "suns", 
+    "mavericks", "bucks", "76ers", "sixers", "clippers", "nuggets", "grizzlies",
+    "pelicans", "rockets", "spurs", "thunder", "jazz", "kings", "blazers",
+    "raptors", "hawks", "hornets", "pistons", "pacers", "cavaliers", "cavs",
+    "magic", "wizards", "timberwolves", "wolves"
+  ];
+  
+  const isNBA = nbaTeams.some(team => textLower.includes(team)) || 
+                textLower.includes("nba") || textLower.includes("basketball");
+  
+  if (isNBA && resolutionDate) {
+    // Format date as YYYYMMDD
+    const dateStr = resolutionDate.toISOString().split("T")[0].replace(/-/g, "");
+    const games = await getESPNScores("basketball", "nba", dateStr);
+    
+    if (games.length > 0) {
+      const gamesText = games.map(g => 
+        `${g.awayTeam} ${g.awayScore} @ ${g.homeTeam} ${g.homeScore} (${g.status})`
+      ).join("\n");
+      
+      return `NBA GAMES FOR ${resolutionDate.toDateString()}:\n${gamesText}`;
+    }
+  }
+  
+  // TODO: Add NFL, MLB, NHL support
+  
+  return "";
+}
+
+// Search for relevant information using Exa API (fallback for non-sports)
 async function searchForContext(query: string): Promise<string> {
   const exaApiKey = process.env.EXA_API_KEY;
   if (!exaApiKey) {
@@ -94,19 +172,25 @@ async function resolveTake(
     aiSubject: string | null;
     aiPrediction: string | null;
     aiResolutionCriteria: string | null;
+    resolvesAt: Date | null;
   }
 ): Promise<{ status: "VERIFIED" | "WRONG" | null; reasoning: string }> {
   try {
-    // Build search query from the prediction - keep it simple and targeted
     const subject = take.aiSubject || "";
     const prediction = take.aiPrediction || take.text;
-    // Extract key terms and add "result" for better sports/event matching
-    const searchQuery = `${subject} ${prediction} final result score January 2026`.slice(0, 200);
-    console.log(`Searching for: ${searchQuery}`);
     
-    // Search for current information
-    const searchContext = await searchForContext(searchQuery);
-    console.log(`Search returned ${searchContext.length} chars`);
+    // First try sports-specific APIs
+    const sportsContext = await getSportsContext(subject, prediction, take.resolvesAt);
+    console.log(`Sports context: ${sportsContext.length} chars`);
+    
+    // Fall back to Exa search if no sports context
+    let searchContext = sportsContext;
+    if (!searchContext) {
+      const searchQuery = `${subject} ${prediction} final result score January 2026`.slice(0, 200);
+      console.log(`Searching for: ${searchQuery}`);
+      searchContext = await searchForContext(searchQuery);
+      console.log(`Exa search returned ${searchContext.length} chars`);
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -180,6 +264,7 @@ export async function GET(request: NextRequest) {
         aiSubject: true,
         aiPrediction: true,
         aiResolutionCriteria: true,
+        resolvesAt: true,
       },
       take: 10,
     });
