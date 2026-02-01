@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import OpenAI from "openai";
+import { Resend } from "resend";
 
 // This endpoint should be called by a cron job every 15 minutes
 // Vercel Cron: Add to vercel.json or use Vercel dashboard
@@ -104,6 +105,13 @@ export async function GET(request: NextRequest) {
   }
 
   const openai = new OpenAI({ apiKey });
+  
+  // Initialize Resend for email notifications (optional)
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const resend = resendApiKey ? new Resend(resendApiKey) : null;
+  if (!resend) {
+    console.log("RESEND_API_KEY not configured - email notifications disabled");
+  }
 
   try {
     // Find takes that are due for resolution
@@ -144,10 +152,18 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        // Update user win/loss record if the take has an author
+        // Update user win/loss record and get user info for email
         const fullTake = await prisma.take.findUnique({
           where: { id: take.id },
-          select: { clerkUserId: true },
+          select: { 
+            clerkUserId: true,
+            user: {
+              select: {
+                email: true,
+                username: true,
+              }
+            }
+          },
         });
 
         if (fullTake?.clerkUserId) {
@@ -158,6 +174,16 @@ export async function GET(request: NextRequest) {
               losses: status === "WRONG" ? { increment: 1 } : undefined,
             },
           });
+
+          // Send email notification
+          if (fullTake.user?.email) {
+            await sendResolutionEmail(
+              resend,
+              { id: take.id, text: take.text, status, reasoning },
+              fullTake.user.email,
+              fullTake.user.username
+            );
+          }
         }
 
         // TODO: Update agreement records (wins/losses for people who agreed/disagreed)
@@ -166,6 +192,7 @@ export async function GET(request: NextRequest) {
           takeId: take.id,
           status,
           reasoning: reasoning.substring(0, 200) + "...",
+          emailSent: !!fullTake?.user?.email,
         });
       } else {
         results.push({
@@ -187,6 +214,73 @@ export async function GET(request: NextRequest) {
       { error: `Resolution failed: ${error}` },
       { status: 500 }
     );
+  }
+}
+
+// Send email notification about take resolution
+async function sendResolutionEmail(
+  resend: Resend | null,
+  take: {
+    id: string;
+    text: string;
+    status: "VERIFIED" | "WRONG";
+    reasoning: string;
+  },
+  userEmail: string | null,
+  username: string
+): Promise<void> {
+  if (!resend || !userEmail) {
+    console.log(`Skipping email for ${username}: no email or Resend not configured`);
+    return;
+  }
+
+  const statusEmoji = take.status === "VERIFIED" ? "✅" : "❌";
+  const statusText = take.status === "VERIFIED" ? "VERIFIED" : "WRONG";
+  const resultText = take.status === "VERIFIED" 
+    ? "Congrats! Your prediction was correct!" 
+    : "Better luck next time - your prediction didn't pan out.";
+
+  try {
+    await resend.emails.send({
+      from: "Receipts <notifications@receipts.app>",
+      to: userEmail,
+      subject: `${statusEmoji} Your take was ${statusText.toLowerCase()}!`,
+      html: `
+        <div style="font-family: 'Courier New', monospace; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <h2 style="border-bottom: 2px dashed #ccc; padding-bottom: 10px;">📜 RECEIPT</h2>
+          
+          <p style="background: #f5f5f0; padding: 15px; border-radius: 8px; font-style: italic;">
+            "${take.text}"
+          </p>
+          
+          <div style="text-align: center; padding: 20px;">
+            <span style="font-size: 48px;">${statusEmoji}</span>
+            <h3 style="color: ${take.status === "VERIFIED" ? "#22c55e" : "#ef4444"}; margin: 10px 0;">
+              ${statusText}
+            </h3>
+            <p>${resultText}</p>
+          </div>
+          
+          <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 20px;">
+            <strong>Resolution Reasoning:</strong>
+            <p style="font-size: 14px; color: #666;">${take.reasoning.substring(0, 500)}${take.reasoning.length > 500 ? "..." : ""}</p>
+          </div>
+          
+          <p style="text-align: center; margin-top: 20px;">
+            <a href="https://receipts.vercel.app/take/${take.id}" style="background: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+              View Receipt
+            </a>
+          </p>
+          
+          <p style="font-size: 12px; color: #999; text-align: center; margin-top: 30px; border-top: 1px dashed #ddd; padding-top: 15px;">
+            Receipts - Lock in your takes. Get your receipts.
+          </p>
+        </div>
+      `,
+    });
+    console.log(`✅ Email sent to ${userEmail} for take ${take.id}`);
+  } catch (error) {
+    console.error(`Failed to send email to ${userEmail}:`, error);
   }
 }
 

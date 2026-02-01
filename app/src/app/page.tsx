@@ -28,7 +28,7 @@ type TakeWithPosition = Take & {
   disagreeCount?: number;
 };
 
-type TabType = "trending" | "recent" | "mine";
+type TabType = "trending" | "recent" | "resolved" | "mine";
 
 export default function Home() {
   const { isSignedIn } = useAuth();
@@ -42,6 +42,7 @@ export default function Home() {
     try {
       let endpoint = "/api/takes/trending";
       if (tab === "recent") endpoint = "/api/takes/recent";
+      if (tab === "resolved") endpoint = "/api/takes/resolved";
       if (tab === "mine") endpoint = "/api/takes/mine";
 
       const response = await fetch(endpoint);
@@ -126,6 +127,16 @@ export default function Home() {
             }`}
           >
             Recent
+          </button>
+          <button
+            onClick={() => handleTabChange("resolved")}
+            className={`text-base sm:text-lg font-semibold transition-colors flex items-center gap-1 whitespace-nowrap ${
+              activeTab === "resolved" 
+                ? "text-white" 
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            <span>✅</span> Resolved
           </button>
           {isSignedIn && (
             <button
