@@ -231,10 +231,11 @@ async function classifyAndFetchData(
     // Step 2: Fetch data based on category
     switch (classification.category) {
       case "NBA":
-        if (classification.teams?.length >= 2 && classification.date) {
-          return await fetchNBAGame(classification.teams, classification.date);
+        if (classification.teams?.length >= 2) {
+          // Use the take's resolution date directly (we know when the game was)
+          return await fetchNBAGame(classification.teams, eventDate);
         }
-        // Fall through to web search if missing data
+        // Fall through to web search if missing teams
         break;
       
       case "NFL":
