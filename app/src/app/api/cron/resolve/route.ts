@@ -3,32 +3,87 @@ import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 import { Resend } from "resend";
 
-// This endpoint should be called by a cron job every 15 minutes
-// Vercel Cron: Add to vercel.json or use Vercel dashboard
+// This endpoint should be called by a cron job every 5 minutes
+// Using cron-job.org for scheduling
 
 const RESOLUTION_PROMPT = `You are an AI that determines whether predictions have come true.
 
 TODAY'S DATE AND TIME: ${new Date().toISOString()}
 
-You will be given a prediction with its resolution criteria. Your job is to:
-1. Search your knowledge for relevant information
+You will be given a prediction along with CURRENT WEB SEARCH RESULTS containing recent information about the subject. Your job is to:
+1. Analyze the web search results for relevant information
 2. Determine if the prediction is TRUE, FALSE, or UNDETERMINED
-3. Provide clear reasoning with sources/facts
+3. Provide clear reasoning with sources/facts from the search results
 
 IMPORTANT RULES:
-- Only mark as TRUE if there is clear evidence the prediction came true
-- Only mark as FALSE if there is clear evidence it did NOT come true  
-- Mark as UNDETERMINED if you cannot find sufficient information
-- Be objective and cite specific facts, scores, prices, announcements, etc.
-- If the event hasn't happened yet (even if past resolution date), mark UNDETERMINED
+- Only mark as TRUE if the search results contain clear evidence the prediction came true
+- Only mark as FALSE if the search results contain clear evidence it did NOT come true  
+- Mark as UNDETERMINED if the search results don't contain sufficient information
+- Be objective and cite specific facts, scores, prices, announcements from the search results
+- If the event hasn't happened yet, mark UNDETERMINED
 
 Respond with JSON:
 {
   "resolution": "TRUE" | "FALSE" | "UNDETERMINED",
   "confidence": "HIGH" | "MEDIUM" | "LOW",
-  "reasoning": "Detailed explanation with specific facts, dates, scores, etc.",
-  "sources": "What information sources you used (e.g., 'NBA official results', 'Bitcoin price data')"
+  "reasoning": "Detailed explanation with specific facts, dates, scores, etc. from the search results",
+  "sources": "Which search results you used"
 }`;
+
+// Search the web using Exa API
+async function searchWeb(query: string): Promise<string> {
+  const exaApiKey = process.env.EXA_API_KEY;
+  if (!exaApiKey) {
+    console.log("⚠️ EXA_API_KEY not configured - skipping web search");
+    return "No web search results available.";
+  }
+
+  try {
+    const response = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": exaApiKey,
+      },
+      body: JSON.stringify({
+        query: query,
+        numResults: 5,
+        contents: {
+          text: { maxCharacters: 1000 }
+        },
+        type: "neural",
+        useAutoprompt: true,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Exa API error:", response.status, await response.text());
+      return "Web search failed.";
+    }
+
+    const data = await response.json();
+    
+    if (!data.results || data.results.length === 0) {
+      return "No relevant search results found.";
+    }
+
+    // Format search results for the AI
+    let formattedResults = "WEB SEARCH RESULTS:\n\n";
+    for (const result of data.results) {
+      formattedResults += `SOURCE: ${result.title}\n`;
+      formattedResults += `URL: ${result.url}\n`;
+      if (result.text) {
+        formattedResults += `CONTENT: ${result.text}\n`;
+      }
+      formattedResults += "\n---\n\n";
+    }
+
+    return formattedResults;
+  } catch (error) {
+    console.error("Web search error:", error);
+    return "Web search failed due to an error.";
+  }
+}
 
 async function resolveTake(
   openai: OpenAI,
@@ -41,6 +96,14 @@ async function resolveTake(
   }
 ): Promise<{ status: "VERIFIED" | "WRONG" | null; reasoning: string }> {
   try {
+    // Build a search query based on the prediction
+    const searchQuery = take.aiResolutionCriteria || take.aiPrediction || take.text;
+    console.log(`🔍 Searching web for: ${searchQuery}`);
+    
+    // Search the web for current information
+    const webResults = await searchWeb(searchQuery);
+    console.log(`📰 Web search returned ${webResults.length} chars`);
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o", // Use gpt-4o for better reasoning on resolution
       max_tokens: 1024,
@@ -48,14 +111,16 @@ async function resolveTake(
         { role: "system", content: RESOLUTION_PROMPT },
         {
           role: "user",
-          content: `Please determine if this prediction has come true:
+          content: `Please determine if this prediction has come true based on the web search results below:
 
 PREDICTION: "${take.text}"
 SUBJECT: ${take.aiSubject || "Not specified"}
 WHAT WAS PREDICTED: ${take.aiPrediction || "Not specified"}
 RESOLUTION CRITERIA: ${take.aiResolutionCriteria || "Not specified"}
 
-Has this prediction come true?`,
+${webResults}
+
+Based on the search results above, has this prediction come true?`,
         },
       ],
       response_format: { type: "json_object" },
@@ -185,8 +250,6 @@ export async function GET(request: NextRequest) {
             );
           }
         }
-
-        // TODO: Update agreement records (wins/losses for people who agreed/disagreed)
 
         results.push({
           takeId: take.id,
