@@ -86,7 +86,7 @@ async function fetchNBAGame(teams: string[], dateStr: string): Promise<string> {
   try {
     // Format date for ESPN API (YYYYMMDD)
     const espnDate = dateStr.replace(/-/g, '');
-    const url = `http://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${espnDate}`;
+    const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${espnDate}`;
     
     console.log(`🏀 Fetching NBA scores from ESPN: ${url}`);
     
@@ -202,16 +202,20 @@ async function classifyAndFetchData(
     aiSubject: string | null;
     aiPrediction: string | null;
     aiResolutionCriteria: string | null;
+    resolvesAt: Date;
   }
 ): Promise<string> {
   try {
+    // Use the take's resolution date, not today's date
+    const eventDate = take.resolvesAt.toISOString().split('T')[0];
+    
     // Step 1: Classify the take
     const classifyResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini", // Use mini for classification (faster/cheaper)
       max_tokens: 256,
       messages: [
         { role: "system", content: CLASSIFICATION_PROMPT },
-        { role: "user", content: `Classify this prediction:\n\n"${take.text}"\n\nResolution criteria: ${take.aiResolutionCriteria || 'Not specified'}\nToday's date: ${new Date().toISOString().split('T')[0]}` },
+        { role: "user", content: `Classify this prediction:\n\n"${take.text}"\n\nResolution criteria: ${take.aiResolutionCriteria || 'Not specified'}\nEvent/Resolution date: ${eventDate}` },
       ],
       response_format: { type: "json_object" },
     });
@@ -259,11 +263,12 @@ async function resolveTake(
     aiSubject: string | null;
     aiPrediction: string | null;
     aiResolutionCriteria: string | null;
+    resolvesAt: Date;
   }
 ): Promise<{ status: "VERIFIED" | "WRONG" | null; reasoning: string }> {
   try {
     // Get data from appropriate source
-    console.log(`🔄 Processing take: ${take.id}`);
+    console.log(`🔄 Processing take: ${take.id} (resolves: ${take.resolvesAt.toISOString()})`);
     const data = await classifyAndFetchData(openai, take);
     console.log(`📊 Data retrieved: ${data.substring(0, 200)}...`);
 
@@ -346,6 +351,7 @@ export async function GET(request: NextRequest) {
         aiSubject: true,
         aiPrediction: true,
         aiResolutionCriteria: true,
+        resolvesAt: true,
       },
       take: 10,
     });
