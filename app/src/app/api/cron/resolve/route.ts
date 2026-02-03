@@ -61,7 +61,9 @@ async function fetchNBAScore(date: Date, teamAbbrevs: string[]): Promise<string 
     
     for (const event of data.events || []) {
       const competitors = event.competitions?.[0]?.competitors || [];
-      const gameTeams = competitors.map((c: any) => c.team?.abbreviation?.toLowerCase());
+      const gameTeams = competitors.map((c: any) => (c.team?.abbreviation || '').toLowerCase());
+      
+      console.log(`  Game: ${event.name} - teams: ${gameTeams.join(', ')}`);
       
       // Check if any of our teams are in this game
       const match = teamAbbrevs.some(abbr => gameTeams.includes(abbr));
@@ -97,18 +99,25 @@ async function resolveTake(
   take: { id: string; text: string; resolvesAt: Date }
 ): Promise<{ status: "VERIFIED" | "WRONG" | null; reasoning: string }> {
   
+  console.log(`\n📋 Take: "${take.text}"`);
+  console.log(`📅 ResolvesAt: ${take.resolvesAt} (type: ${typeof take.resolvesAt})`);
+  
   // Step 1: Check if this is an NBA prediction
   const teams = detectNBATeams(take.text);
-  console.log(`📋 Take "${take.text.substring(0, 50)}..." - detected teams: ${teams.join(', ') || 'none'}`);
+  console.log(`🏀 Detected teams: ${teams.join(', ') || 'none'}`);
   
   let externalData = "";
   
   if (teams.length > 0) {
     // It's an NBA prediction - fetch from ESPN
+    console.log(`🔍 Fetching ESPN data for date: ${take.resolvesAt}`);
     const espnResult = await fetchNBAScore(take.resolvesAt, teams);
+    console.log(`📊 ESPN result: ${espnResult ? espnResult.substring(0, 100) + '...' : 'null'}`);
     if (espnResult) {
       externalData = espnResult;
     }
+  } else {
+    console.log(`⚠️ No NBA teams detected, skipping ESPN fetch`);
   }
   
   // Step 2: Ask GPT to resolve with the data we have
